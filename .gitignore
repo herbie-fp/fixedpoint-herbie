@@ -1,0 +1,3 @@
+# Racket bytecode
+*.zo
+*.dep

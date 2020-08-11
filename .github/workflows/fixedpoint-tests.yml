@@ -1,0 +1,26 @@
+name: Fixed-point Benchmarks
+
+on: [push, repository_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Install Packages"
+        run: sudo apt-get install -y libmpfr6 libmpfr-dev
+      - name: "Install Racket"
+        uses: Bogdanp/setup-racket@v0.5
+      - uses: actions/checkout@master
+        with:
+          path: plugin
+      - name: "Check out Herbie"
+        uses: actions/checkout@master
+        with:
+          repository: uwplse/herbie
+          path: herbie
+          ref: ${{ github.event.client_payload.branch }}
+      - name: "Install Herbie"
+        run: raco pkg install --no-cache --auto --name herbie herbie/src/
+      - run: racket herbie/infra/travis.rkt --precision integer --seed 0 plugin/bench/integer.fpcore
+        env:
+          RUST_BACKTRACE: full
