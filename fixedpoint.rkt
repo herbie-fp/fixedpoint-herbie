@@ -2,15 +2,15 @@
 
 (provide (all-defined-out))
 
-;; Integer operations
+;; Normalization
 
-(define (normalize-int x int frac)
+(define (normalize-fx x int frac)
   (define bits (+ int frac 1))
   (define shift (expt 2 (sub1 bits)))
   (- (modulo (+ (round x) shift) (expt 2 bits)) shift))
 
-(define (clamp-int x bits)
-  (define v (expt 2 (sub1 bits)))
+(define (clamp-fx x int frac)
+  (define v (expt 2 (+ int frac))) ; bits - 1
   (cond
    [(> x (sub1 v)) (sub1 v)]
    [(< x (- v)) (- v)]
@@ -27,30 +27,34 @@
   (if (= s 1) (- m) m))
 
 (define (real->fixed x int frac)
-  (round (* x (expt 2 frac))))
+  (match x
+    [(? nan?) 0]
+    [_ (round (* x (expt 2 frac)))]))
 
-(define (int->ordinal x bits)
-  (+ x (expt 2 (sub1 bits))))
+(define (fx->ordinal x int frac)  ; bits - 1
+  (+ x (expt 2 (+ int frac))))
 
-(define (ordinal->int x bits)
-  (- x (expt 2 (sub1 bits))))
+(define (ordinal->fx x int frac)  ; bits - 1
+  (- x (expt 2 (+ int frac))))
 
 ;; Fixed point operations
 
-(define (fx+ x y int frac)
-  (normalize-int (+ x y) int frac))
+(define (fx+ int frac . args)
+  (normalize-fx (apply + args) int frac))
 
-(define (fx- x y int frac)
-  (normalize-int (- x y) int frac))
+(define (fx- int frac . args)
+  (normalize-fx (apply - args) int frac))
 
-(define (fx* x y int frac)
-  (normalize-int (* x y) int frac))
+(define (fx* int frac . args)
+  (normalize-fx (apply * args) int frac))
 
-(define (fx/ x y int frac)
-  (normalize-int (/ x y) int frac))
+(define (fx/ int frac arg . rest)
+  (if (ormap (λ (x) (= (real->fixed 0 int frac) x)) rest)
+      (real->fixed 0 int frac)
+      (normalize-fx (apply / arg rest) int frac)))
 
-(define (fxshl x shift int frac)
-  (normalize-int (arithmetic-shift x shift) int frac))
+(define (fxshl int frac x shift)
+  (normalize-fx (arithmetic-shift x shift) int frac))
 
-(define (fxshr x shift int frac)
-  (normalize-int (arithmetic-shift x (- shift)) int frac))
+(define (fxshr int frac x shift)
+  (normalize-fx (arithmetic-shift x (- shift)) int frac))
