@@ -1,0 +1,14 @@
+(FPCore (x y)
+ :name "Associativity, fx2,5"
+ :precision (fixed 2 5)
+ (/ (* x 3.5) y))
+
+(FPCore (x y)
+ :name "Associativity, fx5,10"
+ :precision (fixed 5 10)
+ (/ (* x 28) y))
+
+(FPCore (x y)
+ :name "Associativity, fx8,23"
+ :precision (fixed 8 23)
+ (/ (* x 200) y))

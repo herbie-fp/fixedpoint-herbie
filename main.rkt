@@ -20,11 +20,6 @@
 (define (bf!=-fn . args)
   (not (check-duplicates args bf=)))
 
-; Uniquify each operator
-(define (add-suffix x int frac)
-  (string->symbol 
-    (string-append (~s x) ".fx" (~s int) "." (~s frac))))
-
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
   (match name
@@ -73,35 +68,43 @@
       (list (cons 'fl (curry fxshr int frac)) (cons 'bf bfshr)
             (cons 'ival #f) (cons 'nonffi (curry fxshr int frac))))
 
-    (register-operator! '= (add-suffix '=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+    (register-operator! '== (add-suffix '==) (list name name) name 
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator =)) (cons 'bf (comparator bf=))
             (cons 'ival #f) (cons 'nonffi (comparator =))))
 
     (register-operator! '!= (add-suffix '!=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl !=-fn) (cons 'bf bf!=-fn)
             (cons 'ival #f) (cons 'nonffi !=-fn)))
 
     (register-operator! '< (add-suffix '<) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator <)) (cons 'bf (comparator bf<))
             (cons 'ival #f) (cons 'nonffi (comparator <))))
 
     (register-operator! '> (add-suffix '>) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator >)) (cons 'bf (comparator bf>))
             (cons 'ival #f) (cons 'nonffi (comparator >))))
 
     (register-operator! '<= (add-suffix '<=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator <=)) (cons 'bf (comparator bf<=))
             (cons 'ival #f) (cons 'nonffi (comparator <=))))
 
     (register-operator! '>= (add-suffix '>=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype name)  ; override number of arguments
+      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator >=)) (cons 'bf (comparator bf>=))
             (cons 'ival #f) (cons 'nonffi (comparator >=))))
+
+    ; Rules
+
+    (register-ruleset! (add-suffix 'midpoint) '(arithmetic) `((a . ,name) (b . ,name))
+      (list 
+        (list (add-suffix 'midpoint) ; (/ (+ a b) 2) ==> (+ (/ a 2) (/ b 2))
+             `(,(add-suffix '/) (,(add-suffix '+) a b) 2)
+             `(,(add-suffix '+) (,(add-suffix '/) a 2) (,(add-suffix '/) b 2)))))
 
     #t]
    [_ #f]))
