@@ -1,13 +1,15 @@
 #lang racket
 
+(require math/bigfloat)
 (provide (all-defined-out))
 
 ;; Normalization
 
 (define (normalize-fx x int frac)
+  (define x* (inexact->exact (round x)))
   (define bits (+ int frac 1))
   (define shift (expt 2 (sub1 bits)))
-  (- (modulo (+ (round x) shift) (expt 2 bits)) shift))
+  (- (modulo (+ x* shift) (expt 2 bits)) shift))
 
 (define (clamp-fx x int frac)
   (define v (expt 2 (+ int frac))) ; bits - 1
@@ -19,6 +21,7 @@
 ;; Fixed point conversions
 
 (define (fixed->real x int frac)
+  (-> exact-integer? exact-positive-integer? exact-positive-integer? real?)
   (define s (bitwise-bit-field x (+ frac int) (+ frac int 1)))
   (define x* (if (= s 1) (- x) x))
   (define f (bitwise-bit-field x* 0 frac))
@@ -32,10 +35,20 @@
     [_ (round (* x (expt 2 frac)))]))
 
 (define (fx->ordinal x int frac)  ; bits - 1
-  (+ x (expt 2 (+ int frac))))
+  (-> exact-integer? exact-positive-integer? exact-positive-integer? exact-integer?)
+  (+ (clamp-fx x int frac) (expt 2 (+ int frac))))
 
 (define (ordinal->fx x int frac)  ; bits - 1
-  (- x (expt 2 (+ int frac))))
+  (-> exact-integer? exact-positive-integer? exact-positive-integer? exact-integer?)
+  (normalize-fx (- x (expt 2 (+ int frac))) int frac))
+
+(define (bf->fx x int frac)
+  (-> bigfloat? exact-positive-integer? exact-positive-integer? exact-integer?)
+  (normalize-fx (clamp-fx (real->fixed (bigfloat->real x) int frac) int frac) int frac))
+
+(define (fx->bf x int frac)
+  (-> exact-integer? exact-positive-integer? exact-positive-integer? bigfloat?)
+  (bf (fixed->real x int frac)))
 
 ;; Fixed point operations
 

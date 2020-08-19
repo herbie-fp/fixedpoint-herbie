@@ -1,6 +1,6 @@
 #lang racket
 
-(require math/bigfloat herbie/plugin "fixedpoint.rkt")
+(require herbie/plugin math/bigfloat "fixedpoint.rkt")
 
 (eprintf "Loading fixed-point support...\n")
 
@@ -30,11 +30,10 @@
   
     ; Representation
     (register-representation! name 'real integer?
-      (compose (curryr normalize-fx int frac) (curryr clamp-fx int frac)
-                (curryr real->fixed int frac) bigfloat->real)
-      (compose bf (curryr fixed->real int frac))
-      (compose (curryr normalize-fx int frac) (curryr ordinal->fx int frac))
-      (compose (curryr fx->ordinal int frac) (curryr clamp-fx int frac))
+      (curryr bf->fx int frac)
+      (curryr fx->bf int frac)
+      (curryr ordinal->fx int frac)
+      (curryr fx->ordinal int frac)
       (+ int frac 1)
       (const #f))
 
