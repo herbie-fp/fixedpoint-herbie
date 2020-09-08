@@ -29,9 +29,9 @@
         (string-append (~s x) ".fx" (~s int) "." (~s frac))))
   
     ; Representation
-    (register-representation! name 'real integer?
-      (curryr bf->fx int frac)
-      (curryr fx->bf int frac)
+    (register-representation! name 'real exact-integer?
+      (curryr bigfloat->fx int frac)
+      (curryr fx->bigfloat int frac)
       (curryr ordinal->fx int frac)
       (curryr fx->ordinal int frac)
       (+ int frac 1)
