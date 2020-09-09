@@ -1,8 +1,10 @@
 #lang racket
 
 (require math/bigfloat)
-(provide fx->ordinal ordinal->fx fx->bigfloat bigfloat->fx
-         fx+ fx- fx* fx/ fxshl fxshr)
+(provide fx->real real->fx fx->ordinal ordinal->fx
+         fx->bigfloat bigfloat->fx
+         fx+ fx- fx* fx/ fxshl fxshr
+         fxsqrt fxcbrt fxexp fxlog fxpow)
 
 (module+ test
   (require rackunit))
@@ -26,12 +28,12 @@
 
 (define/contract (fx->real x int frac)
   (-> exact-integer? exact-positive-integer? exact-positive-integer? real?)
-  (define s (bitwise-bit-field x (+ frac int) (+ frac int 1)))
-  (define x* (if (= s 1) (- x) x))
-  (define f (bitwise-bit-field x* 0 frac))
-  (define i (bitwise-bit-field x* frac (+ frac int)))
-  (define m (+ i (* f (expt 2 (- frac)))))
-  (if (= s 1) (- m) m))
+  (if (= x (- (expt 2 (+ int frac))))  ; min value
+      (- (expt 2 int))
+      (let* ([f (bitwise-bit-field (abs x) 0 frac)]
+             [i (bitwise-bit-field (abs x) frac (+ frac int))]
+             [m (+ i (* f (expt 2 (- frac))))])
+        (if (negative? x) (- m) m))))
 
 (define/contract (real->fx x int frac)
   (-> real? exact-positive-integer? exact-positive-integer? exact-integer?)
@@ -66,6 +68,13 @@
           exact-integer?))
   (λ (int frac x) (normalize-fx (f x) int frac)))
 
+(define/contract (fx-2ary f)
+  (-> (-> exact-integer? exact-integer? exact-integer?)
+      (-> exact-positive-integer? exact-positive-integer?
+          exact-integer? exact-integer?
+          exact-integer?))
+  (λ (int frac x y) (normalize-fx (f x y) int frac)))
+
 (define/contract (fx-vary f id)
   (-> (-> exact-positive-integer? exact-positive-integer?
           real? real?
@@ -84,6 +93,13 @@
           [(list head rest ...) (f int frac (loop rest) head)]))
       int frac)))
 
+(define (fx-real-op f int frac)
+  (λ args 
+    (let ([res (apply f (map (curryr fx->real int frac) args))])
+      (if (real? res)
+          (real->fx res int frac)
+          0))))
+
 ;; Operations
 
 (define (fx+-2ary int frac x y)
@@ -100,10 +116,17 @@
       0
       (real->fx (/ x y) int frac)))
 
-(define fx+ (fx-vary fx+-2ary 0))
-(define fx- (fx-vary fx--2ary 0))
-(define fx* (fx-vary fx*-2ary 1))
-(define fx/ (fx-vary fx/-2ary 1))
+(define (fx+ int frac . args)
+  (apply (fx-vary fx+-2ary 0) int frac args))
+
+(define (fx- int frac . args)
+  (apply (fx-vary fx--2ary 0) int frac args))
+
+(define (fx* int frac . args)
+  (apply (fx-vary fx*-2ary 1) int frac args))
+
+(define (fx/ int frac . args)
+  (apply (fx-vary fx/-2ary 1) int frac args))
 
 (define (fxshl int frac x shift)
   ((fx-1ary (curryr arithmetic-shift shift)) int frac x))
@@ -111,8 +134,28 @@
 (define (fxshr int frac x shift)
   ((fx-1ary (curryr arithmetic-shift (- shift))) int frac x))
 
-(module+ test
+(define (fxsqrt int frac x)
+  ((fx-1ary (fx-real-op sqrt int frac)) int frac x))
 
+(define (fxcbrt int frac x)
+  ((fx-1ary (fx-real-op (curryr expt 1/3) int frac)) int frac x))
+
+(define (fxexp int frac x)
+  ((fx-1ary (fx-real-op exp int frac)) int frac x))
+
+(define (fxlog int frac x)
+  ((fx-1ary (fx-real-op exp int frac)) int frac x))
+
+; Non-crashing version
+(define (expt-safe x y)
+  (cond
+   [(and (zero? x) (negative? y))  +inf.0]
+   [else (expt x y)]))  
+
+(define (fxpow int frac x y)
+  ((fx-2ary (fx-real-op expt-safe int frac)) int frac x y))
+
+(module+ test
   (define int 20)
   (define frac 20)
   (define err 0.01)
@@ -155,6 +198,4 @@
         (format "For (~a ~a ~a): ~a < ~a < ~a not true" 
                 bfop x y (exact->inexact min)
                 (exact->inexact r) (exact->inexact max)))))
-
-
 )

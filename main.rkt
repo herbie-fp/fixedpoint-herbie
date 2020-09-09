@@ -26,7 +26,7 @@
    [(list 'fixed int frac)
     (define (add-suffix x)
       (string->symbol 
-        (string-append (~s x) ".fx" (~s int) "." (~s frac))))
+        (string-append (~s x) ".fx" (~s int) "-" (~s frac))))
   
     ; Representation
     (register-representation! name 'real exact-integer?
@@ -67,6 +67,26 @@
       (list (cons 'fl (curry fxshr int frac)) (cons 'bf bfshr)
             (cons 'ival #f) (cons 'nonffi (curry fxshr int frac))))
 
+    (register-operator! 'sqrt (add-suffix 'sqrt) (list name) name
+      (list (cons 'fl (curry fxsqrt int frac)) (cons 'bf bfsqrt)
+            (cons 'ival #f) (cons 'nonffi (curry fxsqrt int frac))))
+
+    (register-operator! 'cbrt (add-suffix 'cbrt) (list name) name
+      (list (cons 'fl (curry fxcbrt int frac)) (cons 'bf bfcbrt)
+            (cons 'ival #f) (cons 'nonffi (curry fxcbrt int frac))))
+
+    (register-operator! 'exp (add-suffix 'exp) (list name) name
+      (list (cons 'fl (curry fxexp int frac)) (cons 'bf bfexp)
+            (cons 'ival #f) (cons 'nonffi (curry fxexp int frac))))
+
+    (register-operator! 'log (add-suffix 'log) (list name) name
+      (list (cons 'fl (curry fxlog int frac)) (cons 'bf bflog)
+            (cons 'ival #f) (cons 'nonffi (curry fxlog int frac))))
+
+    (register-operator! 'pow (add-suffix 'pow) (list name name) name
+      (list (cons 'fl (curry fxpow int frac)) (cons 'bf bfexpt)
+            (cons 'ival #f) (cons 'nonffi (curry fxpow int frac))))
+
     (register-operator! '== (add-suffix '==) (list name name) name 
       (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator =)) (cons 'bf (comparator bf=))
@@ -96,14 +116,6 @@
       (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
             (cons 'fl (comparator >=)) (cons 'bf (comparator bf>=))
             (cons 'ival #f) (cons 'nonffi (comparator >=))))
-
-    ; Rules
-
-    (register-ruleset! (add-suffix 'midpoint) '(arithmetic) `((a . ,name) (b . ,name))
-      (list 
-        (list (add-suffix 'midpoint) ; (/ (+ a b) 2) ==> (+ (/ a 2) (/ b 2))
-             `(,(add-suffix '/) (,(add-suffix '+) a b) 2)
-             `(,(add-suffix '+) (,(add-suffix '/) a 2) (,(add-suffix '/) b 2)))))
 
     #t]
    [_ #f]))
