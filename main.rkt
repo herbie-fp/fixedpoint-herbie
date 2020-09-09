@@ -1,6 +1,6 @@
 #lang racket
 
-(require herbie/plugin math/bigfloat "fixedpoint.rkt")
+(require herbie/plugin math/bigfloat rival "fixedpoint.rkt")
 
 (eprintf "Loading fixed-point support...\n")
 
@@ -20,13 +20,27 @@
 (define (bf!=-fn . args)
   (not (check-duplicates args bf=)))
 
+(define (sym-append . args)
+  (string->symbol (apply string-append (map ~s args))))
+
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
   (match name
    [(list 'fixed int frac)
-    (define (add-suffix x)
-      (string->symbol 
-        (string-append (~s x) ".fx" (~s int) "-" (~s frac))))
+
+    (define (register-fx-operator! op op-name argc fl-impl bf-impl ival-impl
+                #:nonffi [nonffi-imlp #f] #:itype [itype #f] #:otype [otype #f])
+      (define nonffi* (if nonffi-imlp nonffi-imlp fl-impl))
+      (define op-name* (sym-append op-name '.fx int '- frac))
+      (define info-dict
+        (let ([base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl)
+                               (cons 'ival ival-impl) (cons 'nonffi nonffi*))])
+          (cond
+            [(and itype otype) (dict-set* base-dict 'itype itype 'otype otype)]
+            [itype (dict-set base-dict 'itype itype)]
+            [otype (dict-set base-dict 'otype otype)]
+            [else base-dict])))
+      (register-operator! op op-name* (make-list argc name) name info-dict))
   
     ; Representation
     (register-representation! name 'real exact-integer?
@@ -39,84 +53,33 @@
 
     ; Operators
 
-    (register-operator! '+ (add-suffix '+) (list name name) name
-      (list (cons 'fl (curry fx+ int frac)) (cons 'bf bf+)
-            (cons 'ival #f) (cons 'nonffi (curry fx+ int frac))))
+    (register-fx-operator! '+ '+ 2 (curry fx+ int frac) bf+ ival-add)
+    (register-fx-operator! '- 'neg 2 (curry fx- int frac) bf- ival-neg)
+    (register-fx-operator! '- '- 2 (curry fx- int frac) bf- ival-sub)
+    (register-fx-operator! '* '* 2 (curry fx* int frac) bf* ival-mult)
+    (register-fx-operator! '/ '/ 2 (curry fx/ int frac) bf/ ival-div)
 
-    (register-operator! '- (add-suffix 'neg) (list name) name
-      (list (cons 'fl (curry fx- int frac)) (cons 'bf bf-)
-            (cons 'ival #f) (cons 'nonffi (curry fx- int frac))))
+    (register-fx-operator! 'shl 'shl 2 (curry fxshl int frac) bfshl #f)
+    (register-fx-operator! 'shr 'shr 2 (curry fxshr int frac) bfshr #f)
 
-    (register-operator! '- (add-suffix '-) (list name name) name
-      (list (cons 'fl (curry fx- int frac)) (cons 'bf bf-)
-            (cons 'ival #f) (cons 'nonffi (curry fx- int frac))))
+    (register-fx-operator! 'sqrt 'sqrt 1 (curry fxsqrt int frac) bfsqrt ival-sqrt)
+    (register-fx-operator! 'cbrt 'cbrt 1 (curry fxcbrt int frac) bfcbrt ival-cbrt)
+    (register-fx-operator! 'exp 'exp 1 (curry fxexp int frac) bfexp ival-exp)
+    (register-fx-operator! 'log 'log 1 (curry fxlog int frac) bflog ival-log)
+    (register-fx-operator! 'pow 'pow 2 (curry fxpow int frac) bfexpt ival-pow)
 
-    (register-operator! '* (add-suffix '*) (list name name) name
-      (list (cons 'fl (curry fx* int frac)) (cons 'bf bf*)
-            (cons 'ival #f) (cons 'nonffi (curry fx+ int frac))))
-    
-    (register-operator! '/ (add-suffix '/) (list name name) name
-      (list (cons 'fl (curry fx/ int frac)) (cons 'bf bf/)
-            (cons 'ival #f) (cons 'nonffi (curry fx/ int frac))))
-
-    (register-operator! 'shl (add-suffix 'shl) (list name name) name
-      (list (cons 'fl (curry fxshl int frac)) (cons 'bf bfshl)
-            (cons 'ival #f) (cons 'nonffi (curry fxshl int frac))))
-
-    (register-operator! 'shr (add-suffix 'shr) (list name name) name
-      (list (cons 'fl (curry fxshr int frac)) (cons 'bf bfshr)
-            (cons 'ival #f) (cons 'nonffi (curry fxshr int frac))))
-
-    (register-operator! 'sqrt (add-suffix 'sqrt) (list name) name
-      (list (cons 'fl (curry fxsqrt int frac)) (cons 'bf bfsqrt)
-            (cons 'ival #f) (cons 'nonffi (curry fxsqrt int frac))))
-
-    (register-operator! 'cbrt (add-suffix 'cbrt) (list name) name
-      (list (cons 'fl (curry fxcbrt int frac)) (cons 'bf bfcbrt)
-            (cons 'ival #f) (cons 'nonffi (curry fxcbrt int frac))))
-
-    (register-operator! 'exp (add-suffix 'exp) (list name) name
-      (list (cons 'fl (curry fxexp int frac)) (cons 'bf bfexp)
-            (cons 'ival #f) (cons 'nonffi (curry fxexp int frac))))
-
-    (register-operator! 'log (add-suffix 'log) (list name) name
-      (list (cons 'fl (curry fxlog int frac)) (cons 'bf bflog)
-            (cons 'ival #f) (cons 'nonffi (curry fxlog int frac))))
-
-    (register-operator! 'pow (add-suffix 'pow) (list name name) name
-      (list (cons 'fl (curry fxpow int frac)) (cons 'bf bfexpt)
-            (cons 'ival #f) (cons 'nonffi (curry fxpow int frac))))
-
-    (register-operator! '== (add-suffix '==) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl (comparator =)) (cons 'bf (comparator bf=))
-            (cons 'ival #f) (cons 'nonffi (comparator =))))
-
-    (register-operator! '!= (add-suffix '!=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl !=-fn) (cons 'bf bf!=-fn)
-            (cons 'ival #f) (cons 'nonffi !=-fn)))
-
-    (register-operator! '< (add-suffix '<) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl (comparator <)) (cons 'bf (comparator bf<))
-            (cons 'ival #f) (cons 'nonffi (comparator <))))
-
-    (register-operator! '> (add-suffix '>) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl (comparator >)) (cons 'bf (comparator bf>))
-            (cons 'ival #f) (cons 'nonffi (comparator >))))
-
-    (register-operator! '<= (add-suffix '<=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl (comparator <=)) (cons 'bf (comparator bf<=))
-            (cons 'ival #f) (cons 'nonffi (comparator <=))))
-
-    (register-operator! '>= (add-suffix '>=) (list name name) name 
-      (list (cons 'itype name) (cons 'otype 'bool)  ; override number of arguments
-            (cons 'fl (comparator >=)) (cons 'bf (comparator bf>=))
-            (cons 'ival #f) (cons 'nonffi (comparator >=))))
-
+    (register-fx-operator! '== '== 2 (comparator =) (comparator bf=) (comparator ival-==)
+                           #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '!= '!= 2 !=-fn bf!=-fn ival-!=
+                           #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '< '< 2 (comparator <) (comparator bf<) (comparator ival-<)
+                           #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '> '> 2 (comparator >) (comparator bf>) (comparator ival->)
+                           #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '<= '<= 2 (comparator <=) (comparator bf<=) (comparator ival-<=)
+                           #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '>= '>= 2 (comparator >=) (comparator bf>=) (comparator ival->=)
+                           #:itype name #:otype 'bool) ; override number of arguments
     #t]
    [_ #f]))
 
