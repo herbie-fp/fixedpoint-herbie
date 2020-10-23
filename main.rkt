@@ -44,29 +44,29 @@
   
     ; Representation
     (register-representation! name 'real exact-integer?
-      (curryr bigfloat->fx int frac)
-      (curryr fx->bigfloat int frac)
-      (curryr ordinal->fx int frac)
-      (curryr fx->ordinal int frac)
+      (curry bigfloat->fx int frac)
+      (curry fx->bigfloat int frac)
+      (curry ordinal->fx int frac)
+      (curry fx->ordinal int frac)
       (+ int frac 1)
       (const #f))
 
     ; Operators
 
-    (register-fx-operator! '+ '+ 2 (curry fx+ int frac) bf+ ival-add)
-    (register-fx-operator! '- 'neg 2 (curry fx- int frac) bf- ival-neg)
-    (register-fx-operator! '- '- 2 (curry fx- int frac) bf- ival-sub)
-    (register-fx-operator! '* '* 2 (curry fx* int frac) bf* ival-mult)
-    (register-fx-operator! '/ '/ 2 (curry fx/ int frac) bf/ ival-div)
+    (register-fx-operator! '+ '+ 2 (fx+ int frac) bf+ ival-add)
+    (register-fx-operator! '- 'neg 1 (fx- int frac) bf- ival-neg)
+    (register-fx-operator! '- '- 2 (fx- int frac) bf- ival-sub)
+    (register-fx-operator! '* '* 2 (fx* int frac) bf* ival-mult)
+    (register-fx-operator! '/ '/ 2 (fx/ int frac) bf/ ival-div)
 
-    (register-fx-operator! 'shl 'shl 2 (curry fxshl int frac) bfshl #f)
-    (register-fx-operator! 'shr 'shr 2 (curry fxshr int frac) bfshr #f)
+    (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
+    (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
 
-    (register-fx-operator! 'sqrt 'sqrt 1 (curry fxsqrt int frac) bfsqrt ival-sqrt)
-    (register-fx-operator! 'cbrt 'cbrt 1 (curry fxcbrt int frac) bfcbrt ival-cbrt)
-    (register-fx-operator! 'exp 'exp 1 (curry fxexp int frac) bfexp ival-exp)
-    (register-fx-operator! 'log 'log 1 (curry fxlog int frac) bflog ival-log)
-    (register-fx-operator! 'pow 'pow 2 (curry fxpow int frac) bfexpt ival-pow)
+    (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac) bfsqrt ival-sqrt)
+    (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac) bfcbrt ival-cbrt)
+    (register-fx-operator! 'exp 'exp 1 (fxexp int frac) bfexp ival-exp)
+    (register-fx-operator! 'log 'log 1 (fxlog int frac) bflog ival-log)
+    (register-fx-operator! 'pow 'pow 2 (fxpow int frac) bfexpt ival-pow)
 
     (register-fx-operator! '== '== 2 (comparator =) (comparator bf=) (comparator ival-==)
                            #:itype name #:otype 'bool) ; override number of arguments
