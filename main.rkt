@@ -68,6 +68,14 @@
     (register-fx-operator! 'log 'log 1 (fxlog int frac) bflog ival-log)
     (register-fx-operator! 'pow 'pow 2 (fxpow int frac) bfexpt ival-pow)
 
+    (register-fx-operator! 'sin 'sin 1 (fxsin int frac) bfsin ival-sin)
+    (register-fx-operator! 'cos 'cos 1 (fxcos int frac) bfcos ival-cos)
+    (register-fx-operator! 'tan 'tan 1 (fxtan int frac) bftan ival-tan)
+    (register-fx-operator! 'asin 'asin 1 (fxasin int frac) bfasin ival-asin)
+    (register-fx-operator! 'acos 'acos 1 (fxacos int frac) bfacos ival-acos)
+    (register-fx-operator! 'atan 'atan 1 (fxatan int frac) bfatan ival-atan)
+    (register-fx-operator! 'atan2 'atan2 1 (fxatan2 int frac) bfatan2 ival-atan2)
+
     (register-fx-operator! '== '== 2 (comparator =) (comparator bf=) (comparator ival-==)
                            #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '!= '!= 2 !=-fn bf!=-fn ival-!=

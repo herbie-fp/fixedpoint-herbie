@@ -2,33 +2,49 @@
 
 (require math/bigfloat)
 (provide (contract-out
-          [fx->real (-> exact-positive-integer? exact-positive-integer? exact-integer? real?)]
-          [real->fx (-> exact-positive-integer? exact-positive-integer? real? exact-integer?)]
-          [fx->ordinal (-> exact-positive-integer? exact-positive-integer? exact-integer? exact-integer?)]
-          [ordinal->fx (-> exact-positive-integer? exact-positive-integer? exact-integer? exact-integer?)]
-          [fx->bigfloat (-> exact-positive-integer? exact-positive-integer? exact-integer? bigfloat?)]
-          [bigfloat->fx (-> exact-positive-integer? exact-positive-integer? bigfloat? exact-integer?)]
-          [fx+ (-> exact-positive-integer? exact-positive-integer?
+          [fx->real (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? real?)]
+          [real->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? real? exact-integer?)]
+          [fx->ordinal (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? exact-integer?)]
+          [ordinal->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? exact-integer?)]
+          [fx->bigfloat (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? bigfloat?)]
+          [bigfloat->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? bigfloat? exact-integer?)]
+          [fx+ (-> exact-nonnegative-integer? exact-nonnegative-integer?
                    (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
-          [fx- (-> exact-positive-integer? exact-positive-integer?
+          [fx- (-> exact-nonnegative-integer? exact-nonnegative-integer?
                    (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
-          [fx* (-> exact-positive-integer? exact-positive-integer?
+          [fx* (-> exact-nonnegative-integer? exact-nonnegative-integer?
                    (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
-          [fx/ (-> exact-positive-integer? exact-positive-integer?
+          [fx/ (-> exact-nonnegative-integer? exact-nonnegative-integer?
                    (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
-          [fxshl (-> exact-positive-integer? exact-positive-integer?
+          [fxshl (-> exact-nonnegative-integer? exact-nonnegative-integer?
                      (-> exact-integer? exact-integer? exact-integer?))]
-          [fxshr (-> exact-positive-integer? exact-positive-integer?
+          [fxshr (-> exact-nonnegative-integer? exact-nonnegative-integer?
                      (-> exact-integer? exact-integer? exact-integer?))]
-          [fxsqrt (-> exact-positive-integer? exact-positive-integer?
+
+          [fxsqrt (-> exact-nonnegative-integer? exact-nonnegative-integer?
                       (-> exact-integer? exact-integer?))]
-          [fxcbrt (-> exact-positive-integer? exact-positive-integer?
+          [fxcbrt (-> exact-nonnegative-integer? exact-nonnegative-integer?
                       (-> exact-integer? exact-integer?))]
-          [fxexp (-> exact-positive-integer? exact-positive-integer?
+          [fxexp (-> exact-nonnegative-integer? exact-nonnegative-integer?
                      (-> exact-integer? exact-integer?))]
-          [fxlog (-> exact-positive-integer? exact-positive-integer?
+          [fxlog (-> exact-nonnegative-integer? exact-nonnegative-integer?
                      (-> exact-integer? exact-integer?))]
-          [fxpow (-> exact-positive-integer? exact-positive-integer?
+          [fxpow (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer? exact-integer?))]
+
+          [fxsin (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxcos (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxtan (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxasin (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxacos (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxatan (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                     (-> exact-integer? exact-integer?))]
+          [fxatan2 (-> exact-nonnegative-integer? exact-nonnegative-integer?
                      (-> exact-integer? exact-integer? exact-integer?))]))
 
 (module+ test
@@ -67,7 +83,7 @@
         (sub1 (expt 2 (+ int frac))) ; max
         (- (expt 2 (+ int frac))))] ; min
    [else
-    (let ([v (inexact->exact (round (* x (expt 2 frac))))])
+    (let ([v (inexact->exact (truncate (* x (expt 2 frac))))])
       (clamp-fx int frac v))]))
 
 (define (fx->ordinal int frac x)  ; bits - 1
@@ -133,6 +149,12 @@
       (log x)
       +nan.0)) 
 
+(define (atan2 y x)
+  (let ([r (atan (/ y x))])
+    (cond
+     [(negative? x) (+ r pi)]
+     [else          r])))
+
 ;; Exported ops
 
 (define (fx+ int frac) (fx-vary fx+-2ary int frac 0))
@@ -145,6 +167,15 @@
 (define (fxexp int frac) (fx-1ary (fx-real-op exp int frac) int frac))
 (define (fxlog int frac) (fx-1ary (fx-real-op log-safe int frac) int frac))
 (define (fxpow int frac) (fx-2ary (fx-real-op expt-safe int frac) int frac))
+
+(define (fxsin int frac) (fx-1ary (fx-real-op sin int frac) int frac))
+(define (fxcos int frac) (fx-1ary (fx-real-op cos int frac) int frac))
+(define (fxtan int frac) (fx-1ary (fx-real-op tan int frac) int frac))
+
+(define (fxasin int frac) (fx-1ary (fx-real-op asin int frac) int frac))
+(define (fxacos int frac) (fx-1ary (fx-real-op acos int frac) int frac))
+(define (fxatan int frac) (fx-1ary (fx-real-op atan int frac) int frac))
+(define (fxatan2 int frac) (fx-2ary (fx-real-op atan2 int frac) int frac))
 
 (define (fxshl int frac)
   (λ (x shift) (normalize-fx int frac (arithmetic-shift x shift))))
