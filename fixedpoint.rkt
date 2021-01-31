@@ -60,12 +60,15 @@
         (if (negative? x) (- m) m))))
 
 (define (real->fx int frac x)
-  (match x
-    [+nan.0 0]
-    [+inf.0 (sub1 (expt 2 (+ int frac)))] ; max
-    [-inf.0 (- (expt 2 (+ int frac)))] ; min
-    [_ (let ([v (inexact->exact (round (* x (expt 2 frac))))])
-          (clamp-fx int frac v))]))
+  (cond
+   [(nan? x) 0]
+   [(infinite? x)
+    (if (negative? x)
+        (sub1 (expt 2 (+ int frac))) ; max
+        (- (expt 2 (+ int frac))))] ; min
+   [else
+    (let ([v (inexact->exact (round (* x (expt 2 frac))))])
+      (clamp-fx int frac v))]))
 
 (define (fx->ordinal int frac x)  ; bits - 1
   (+ x (expt 2 (+ int frac))))
