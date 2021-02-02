@@ -106,12 +106,6 @@
 
 ;; Helper functions
 
-; No-except version
-(define (log-safe x)
-  (cond
-   [(<= x 0)  +nan.0]
-   [else (log x)]))
-
 (define (atan2 y x)
   (let ([r (atan (/ y x))])
     (cond
@@ -154,6 +148,7 @@
     (let ([x* (fx->real int frac x)])
       (real->fx int frac
         (cond [(<= x* 0) +nan.0]
+              [(> (* (log 2) x*) int) +inf.0]
               [else (log x*)])))))
 
 (define (fxpow int frac)
@@ -164,10 +159,7 @@
         (cond
          [(and (zero? x*) (negative? y*)) +nan.0]
          [(and (negative? x*) (not (integer? y*))) +nan.0]
-         [(and (> x* 1) (> (* (log x* 2) y*) int)) +inf.0]
-         [(and (< x* 1) (> (* (log (abs x*) 2) y*) int))
-          (if (even? y) +inf.0 -inf.0)]
-         [else (expt x* y*)])))))
+         [else (expt (exact->inexact x*) (exact->inexact y*))])))))
 
 ;; Trigonometric
 
