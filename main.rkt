@@ -43,7 +43,7 @@
       (register-operator! op op-name* (make-list argc name) name info-dict))
   
     ; Representation
-    (register-representation! name 'real exact-integer?
+    (register-representation! name 'real fx?
       (curry bigfloat->fx int frac)
       (curry fx->bigfloat int frac)
       (curry ordinal->fx int frac)
@@ -53,17 +53,18 @@
 
     ; Operators
 
+    (register-fx-operator! '- 'neg 1 - bf- ival-neg)
     (register-fx-operator! '+ '+ 2 (fx+ int frac) bf+ ival-add)
-    (register-fx-operator! '- 'neg 1 (fx- int frac) bf- ival-neg)
     (register-fx-operator! '- '- 2 (fx- int frac) bf- ival-sub)
     (register-fx-operator! '* '* 2 (fx* int frac) bf* ival-mult)
     (register-fx-operator! '/ '/ 2 (fx/ int frac) bf/ ival-div)
-
-    (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
-    (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
-
     (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac) bfsqrt ival-sqrt)
     (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac) bfcbrt ival-cbrt)
+    (register-fx-operator! 'abs 'abs 1 abs bfabs ival-fabs)
+
+    ; (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
+    ; (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
+
     (register-fx-operator! 'exp 'exp 1 (fxexp int frac) bfexp ival-exp)
     (register-fx-operator! 'log 'log 1 (fxlog int frac) bflog ival-log)
     (register-fx-operator! 'pow 'pow 2 (fxpow int frac) bfexpt ival-pow)
@@ -74,7 +75,6 @@
     (register-fx-operator! 'asin 'asin 1 (fxasin int frac) bfasin ival-asin)
     (register-fx-operator! 'acos 'acos 1 (fxacos int frac) bfacos ival-acos)
     (register-fx-operator! 'atan 'atan 1 (fxatan int frac) bfatan ival-atan)
-    (register-fx-operator! 'atan2 'atan2 1 (fxatan2 int frac) bfatan2 ival-atan2)
 
     (register-fx-operator! '== '== 2 (comparator =) (comparator bf=) (comparator ival-==)
                            #:itype name #:otype 'bool) ; override number of arguments
@@ -88,6 +88,7 @@
                            #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '>= '>= 2 (comparator >=) (comparator bf>=) (comparator ival->=)
                            #:itype name #:otype 'bool) ; override number of arguments
+
     #t]
    [_ #f]))
 

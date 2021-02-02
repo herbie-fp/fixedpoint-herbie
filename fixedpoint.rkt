@@ -2,50 +2,61 @@
 
 (require math/bigfloat)
 (provide (contract-out
-          [fx->real (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? real?)]
-          [real->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? real? exact-integer?)]
-          [fx->ordinal (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? exact-integer?)]
-          [ordinal->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? exact-integer?)]
-          [fx->bigfloat (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-integer? bigfloat?)]
-          [bigfloat->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? bigfloat? exact-integer?)]
+          [fx? (-> any/c boolean?)]
+          [fx->real (-> exact-nonnegative-integer? exact-nonnegative-integer? fx? real?)]
+          [real->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? real? fx?)]
+          [fx->ordinal (-> exact-nonnegative-integer? exact-nonnegative-integer? fx? fx?)]
+          [ordinal->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? fx? fx?)]
+          [fx->bigfloat (-> exact-nonnegative-integer? exact-nonnegative-integer? fx? bigfloat?)]
+          [bigfloat->fx (-> exact-nonnegative-integer? exact-nonnegative-integer? bigfloat? fx?)]
+
           [fx+ (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                   (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
+                   (-> fx? fx? fx?))]
           [fx- (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                   (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
+                   (-> fx? fx? fx?))]
           [fx* (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                   (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
+                   (-> fx? fx? fx?))]
           [fx/ (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                   (->* (exact-integer?) #:rest (listof exact-integer?) exact-integer?))]
+                   (-> fx? fx? fx?))]
           [fxshl (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer? exact-integer?))]
+                     (-> fx? fx? fx?))]
           [fxshr (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer? exact-integer?))]
+                     (-> fx? fx? fx?))]
 
           [fxsqrt (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                      (-> exact-integer? exact-integer?))]
+                      (-> fx? fx?))]
           [fxcbrt (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                      (-> exact-integer? exact-integer?))]
+                      (-> fx? fx?))]
           [fxexp (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxlog (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxpow (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer? exact-integer?))]
+                     (-> fx? fx? fx?))]
 
           [fxsin (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxcos (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxtan (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxasin (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxacos (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxatan (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer?))]
+                     (-> fx? fx?))]
           [fxatan2 (-> exact-nonnegative-integer? exact-nonnegative-integer?
-                     (-> exact-integer? exact-integer? exact-integer?))]))
+                     (-> fx? fx? fx?))]
+
+          [fxbytes->binary64 (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                                 (-> fx? real?))]
+          [binary64->fxbytes (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                                 (-> real? fx?))]
+          [fxbytes->binary32 (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                                 (-> fx? real?))]
+          [binary32->fxbytes (-> exact-nonnegative-integer? exact-nonnegative-integer?
+                                 (-> real? fx?))]))
 
 (module+ test
   (require rackunit))
@@ -53,44 +64,34 @@
 ;; Normalization
 
 (define (normalize-fx int frac x)
-  (define x* (inexact->exact (truncate x)))
-  (define bits (+ int frac 1))
-  (define shift (expt 2 (sub1 bits)))
-  (- (modulo (+ x* shift) (expt 2 bits)) shift))
-
-(define (clamp-fx int frac x)
-  (define v (expt 2 (+ int frac))) ; bits - 1
   (cond
-   [(> x (sub1 v)) (sub1 v)]
-   [(< x (- v)) (- v)]
-   [else x]))
+   [(nan? x) x]
+   [else
+    (define x* (inexact->exact (truncate x)))
+    (define bits (+ int frac 1))
+    (define shift (expt 2 (sub1 bits)))
+    (- (modulo (+ x* shift) (expt 2 bits)) shift)]))
 
 ;; Conversions
 
 (define (fx->real int frac x)
-  (if (= x (- (expt 2 (+ int frac))))  ; min value
-      (- (expt 2 int))
-      (let* ([f (bitwise-bit-field (abs x) 0 frac)]
-             [i (bitwise-bit-field (abs x) frac (+ frac int))]
-             [m (+ i (* f (expt 2 (- frac))))])
-        (if (negative? x) (- m) m))))
+  (if (nan? x) x (/ x (expt 2 frac))))
 
 (define (real->fx int frac x)
+  (define max (sub1 (expt 2 int)))
+  (define min (- (expt 2 int)))
   (cond
-   [(nan? x) 0]
-   [(infinite? x)
-    (if (negative? x)
-        (sub1 (expt 2 (+ int frac))) ; max
-        (- (expt 2 (+ int frac))))] ; min
-   [else
-    (let ([v (inexact->exact (truncate (* x (expt 2 frac))))])
-      (clamp-fx int frac v))]))
+   [(nan? x) x]
+   [(infinite? x) (if (negative? x) (* min (expt 2 frac)) (* max (expt 2 frac)))]
+   [(> x max) (* max (expt 2 frac))]
+   [(< x min) (* min (expt 2 frac))]
+   [else (inexact->exact (truncate (* x (expt 2 frac))))]))
 
 (define (fx->ordinal int frac x)  ; bits - 1
-  (+ x (expt 2 (+ int frac))))
+  (if (nan? x) (expt 2 (+ int frac 1)) (+ x (expt 2 (+ int frac)))))
 
 (define (ordinal->fx int frac x)  ; bits - 1
-  (- x (expt 2 (+ int frac))))
+  (if (= x (expt 2 (+ int frac 1))) +nan.0 (- x (expt 2 (+ int frac)))))
 
 (define (bigfloat->fx int frac x)
   (real->fx int frac (bigfloat->real x)))
@@ -98,56 +99,18 @@
 (define (fx->bigfloat int frac x)
   (bf (fx->real int frac x)))
 
+;; Predicates
+
+(define (fx? x)
+  (and (real? x) (or (exact-integer? x) (nan? x))))
+
 ;; Helper functions
-
-(define (fx-1ary f int frac)
-  (λ (x) (normalize-fx int frac (f x))))
-
-(define (fx-2ary f int frac)
-  (λ (x y) (normalize-fx int frac (f x y))))
-
-(define (fx-vary f int frac id)
-  (λ args
-    (normalize-fx int frac
-      (let loop ([args (reverse args)])
-        (match args
-          [(list) (error 'fx-vary "~a expects at least 1 argument" f)]
-          [(list head) (f int frac (real->fx int frac id) head)]
-          [(list head tail) (f int frac tail head)]
-          [(list head rest ...) (f int frac (loop rest) head)])))))
-
-(define (fx-real-op f int frac)
-  (λ args 
-    (let ([res (apply f (map (curry fx->real int frac) args))])
-      (if (real? res)
-          (real->fx int frac res)
-          0))))
-
-;; Operations
-
-(define (fx+-2ary int frac x y)
-  (+ x y))
-
-(define (fx--2ary int frac x y)
-  (- x y))
-
-(define (fx*-2ary int frac x y)
-  (arithmetic-shift (* x y) (- frac)))
-
-(define (fx/-2ary int frac x y)
-  (if (zero? y) 0 (real->fx int frac (/ x y))))
-
-; No-except version
-(define (expt-safe x y)
-  (cond
-   [(and (zero? x) (negative? y))  +inf.0]
-   [else (expt x y)])) 
 
 ; No-except version
 (define (log-safe x)
-  (if (positive? x)
-      (log x)
-      +nan.0)) 
+  (cond
+   [(<= x 0)  +nan.0]
+   [else (log x)]))
 
 (define (atan2 y x)
   (let ([r (atan (/ y x))])
@@ -155,27 +118,83 @@
      [(negative? x) (+ r pi)]
      [else          r])))
 
-;; Exported ops
+;; Arithmetic
 
-(define (fx+ int frac) (fx-vary fx+-2ary int frac 0))
-(define (fx- int frac) (fx-vary fx--2ary int frac 0))
-(define (fx* int frac) (fx-vary fx*-2ary int frac 1))
-(define (fx/ int frac) (fx-vary fx/-2ary int frac 1))
+(define (fx+ int frac)
+  (λ (x y) (normalize-fx int frac (+ x y))))
 
-(define (fxsqrt int frac) (fx-1ary (fx-real-op sqrt int frac) int frac))
-(define (fxcbrt int frac) (fx-1ary (fx-real-op (curryr expt 1/3) int frac) int frac))
-(define (fxexp int frac) (fx-1ary (fx-real-op exp int frac) int frac))
-(define (fxlog int frac) (fx-1ary (fx-real-op log-safe int frac) int frac))
-(define (fxpow int frac) (fx-2ary (fx-real-op expt-safe int frac) int frac))
+(define (fx- int frac)
+  (λ (x y) (normalize-fx int frac (- x y))))
 
-(define (fxsin int frac) (fx-1ary (fx-real-op sin int frac) int frac))
-(define (fxcos int frac) (fx-1ary (fx-real-op cos int frac) int frac))
-(define (fxtan int frac) (fx-1ary (fx-real-op tan int frac) int frac))
+(define (fx* int frac)
+  (λ (x y) (normalize-fx int frac (/ (* x y) (arithmetic-shift 1 frac)))))
 
-(define (fxasin int frac) (fx-1ary (fx-real-op asin int frac) int frac))
-(define (fxacos int frac) (fx-1ary (fx-real-op acos int frac) int frac))
-(define (fxatan int frac) (fx-1ary (fx-real-op atan int frac) int frac))
-(define (fxatan2 int frac) (fx-2ary (fx-real-op atan2 int frac) int frac))
+(define (fx/ int frac)
+  (λ (x y)
+    (cond [(zero? y) 0]
+          [else (normalize-fx int frac (/ (* x (arithmetic-shift 1 frac)) y))])))
+
+(define (fxsqrt int frac)
+  (λ (x)
+    (let ([res (sqrt (fx->real int frac x))])
+      (real->fx int frac (if (real? res) res +nan.0)))))
+
+(define (fxcbrt int frac)
+    (λ (x)
+    (let ([res (expt (fx->real int frac x) 1/3)])
+      (real->fx int frac (if (real? res) res +nan.0)))))
+
+;; Exponential / Logarithmic
+
+(define (fxexp int frac)
+  (λ (x) (real->fx int frac (exp (fx->real int frac x)))))
+
+(define (fxlog int frac)
+  (λ (x) 
+    (let ([x* (fx->real int frac x)])
+      (real->fx int frac
+        (cond [(<= x* 0) +nan.0]
+              [else (log x*)])))))
+
+(define (fxpow int frac)
+  (λ (x y)
+    (let ([x* (fx->real int frac x)]
+          [y* (fx->real int frac y)])
+      (real->fx int frac 
+        (cond
+         [(and (zero? x*) (negative? y*)) +nan.0]
+         [(and (negative? x*) (not (integer? y*))) +nan.0]
+         [(and (> x* 1) (> (* (log x* 2) y*) int)) +inf.0]
+         [(and (< x* 1) (> (* (log (abs x*) 2) y*) int))
+          (if (even? y) +inf.0 -inf.0)]
+         [else (expt x* y*)])))))
+
+;; Trigonometric
+
+(define (fxsin int frac)
+  (λ (x) (real->fx int frac (sin (fx->real int frac x)))))
+
+(define (fxcos int frac)
+  (λ (x) (real->fx int frac (cos (fx->real int frac x)))))
+
+(define (fxtan int frac)
+  (λ (x) (real->fx int frac (tan (fx->real int frac x)))))
+
+(define (fxasin int frac)
+  (λ (x) (real->fx int frac (asin (fx->real int frac x)))))
+
+(define (fxacos int frac)
+  (λ (x) (real->fx int frac (acos (fx->real int frac x)))))
+
+(define (fxatan int frac)
+  (λ (x) (real->fx int frac (atan (fx->real int frac x)))))
+
+(define (fxatan2 int frac)
+  (λ (x y)
+    (real->fx int frac
+      (atan2 (fx->real int frac x) (fx->real int frac y)))))
+
+;; Bitwise operators
 
 (define (fxshl int frac)
   (λ (x shift) (normalize-fx int frac (arithmetic-shift x shift))))
@@ -183,29 +202,64 @@
 (define (fxshr int frac)
   (λ (x shift) (normalize-fx int frac (arithmetic-shift x (- shift)))))
 
+(define (fxbytes->binary64 int frac)
+  (unless (= (+ int frac 1) 64)
+    (error 'fxbytes->binary64 "Operator does not exist for (fixed ~a ~a)\n" int frac))
+  (λ (x)
+    (let ([bstr (integer->integer-bytes x 8 #t)])
+      (floating-point-bytes->real bstr))))
+
+(define (binary64->fxbytes int frac)
+  (unless (= (+ int frac 1) 64)
+    (error 'binary64->fxbytes "Operator does not exist for (fixed ~a ~a)\n" int frac))
+  (λ (x)
+    (let ([bstr (real->floating-point-bytes x 8)])
+      (integer-bytes->integer bstr #t))))
+
+(define (fxbytes->binary32 int frac)
+  (unless (= (+ int frac 1) 32)
+    (error 'fxbytes->binary32 "Operator does not exist for (fixed ~a ~a)\n" int frac))
+  (λ (x)
+    (let ([bstr (integer->integer-bytes x 4 #t)])
+      (floating-point-bytes->real bstr))))
+
+(define (binary32->fxbytes int frac)
+  (unless (= (+ int frac 1) 32)
+    (error 'binary32->fxbytes "Operator does not exist for (fixed ~a ~a)\n" int frac))
+  (λ (x)
+    (let ([bstr (real->floating-point-bytes x 4)])
+      (integer-bytes->integer bstr #t))))
+
+;;
+;;  Tests
+;;
+
 (module+ test
   (define int 20)
   (define frac 20)
   (define err 0.01)
  
   (define vals '(-100 -10 -1 -0.01 0 0.01 1 10 100))
+  (define vals* (cons +nan.0 vals))
   (define vals2 (cartesian-product vals vals))
 
   (define ops (list fx+ fx- fx* fx/))
   (define bfops (list + - * /))
 
-  (for ([v vals])
+  (for ([v vals*])
     (define v* (fx->real int frac (real->fx int frac v)))
     (define max (+ v (abs (* v err))))
     (define min (- v (abs (* v err))))
-    (check-true (<= min v* max) (format "fx<=>real: ~a != ~a" v v*)))
+    (check-true (or (<= min v* max) (and (nan? v) (nan? v*)))
+                (format "fx<=>real: ~a != ~a" v v*)))
 
-  (for ([v vals])
+  (for ([v vals*])
     (define x (real->fx int frac v))
     (define x* (ordinal->fx int frac (fx->ordinal int frac x)))
-    (check-equal? x x* (format "fx<=>ordinal: ~a != ~a for ~a" x x* v)))
+    (check-true (or (= x x*) (and (nan? x) (nan? x*)))
+                (format "fx<=>ordinal: ~a != ~a for ~a" x x* v)))
 
-  (for ([v vals])
+  (for ([v vals*])
     (define x (real->fx int frac v))
     (define x* (bigfloat->fx int frac (fx->bigfloat int frac x)))
     (check-equal? x x* (format "fx<=>bigfloat: ~a != ~a for ~a" x x* v)))
