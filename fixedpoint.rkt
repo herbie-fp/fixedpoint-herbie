@@ -106,12 +106,6 @@
 
 ;; Helper functions
 
-(define (atan2 y x)
-  (let ([r (atan (/ y x))])
-    (cond
-     [(negative? x) (+ r pi)]
-     [else          r])))
-
 ;; Arithmetic
 
 (define (fx+ int frac)
@@ -173,18 +167,32 @@
   (λ (x) (real->fx int frac (tan (fx->real int frac x)))))
 
 (define (fxasin int frac)
-  (λ (x) (real->fx int frac (asin (fx->real int frac x)))))
+  (λ (x)
+    (let ([r (asin (fx->real int frac x))])
+      (real->fx int frac
+        (cond [(real? r) r]
+              [else +nan.0])))))
 
 (define (fxacos int frac)
-  (λ (x) (real->fx int frac (acos (fx->real int frac x)))))
+  (λ (x)
+    (let ([r (acos (fx->real int frac x))])
+      (real->fx int frac
+        (cond [(real? r) r]
+              [else +nan.0])))))
 
 (define (fxatan int frac)
-  (λ (x) (real->fx int frac (atan (fx->real int frac x)))))
+  (λ (x)
+    (let ([r (atan (fx->real int frac x))])
+      (real->fx int frac
+        (cond [(real? r) r]
+              [else +nan.0])))))
 
 (define (fxatan2 int frac)
-  (λ (x y)
-    (real->fx int frac
-      (atan2 (fx->real int frac x) (fx->real int frac y)))))
+  (λ (y x)
+    (let ([r (atan (fx->real int frac y) (fx->real int frac x))])
+      (real->fx int frac
+        (cond [(real? r) r]
+              [else +nan.0])))))
 
 ;; Bitwise operators
 
