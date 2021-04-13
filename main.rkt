@@ -58,7 +58,7 @@
     (register-fx-operator! '/ '/ 2 (fx/ int frac) bf/ ival-div /)
     (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac) bfsqrt ival-sqrt sqrt)
     (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac) bfcbrt ival-cbrt (curryr expt 1/3))
-    (register-fx-operator! 'abs 'abs 1 abs bfabs ival-fabs abs)
+    (register-fx-operator! 'fabs 'fabs 1 abs bfabs ival-fabs abs)
 
     ; (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
     ; (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
