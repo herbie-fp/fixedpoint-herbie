@@ -26,18 +26,14 @@
   (match name
    [(list 'fixed int frac)
 
-    (define (register-fx-operator! op op-name argc fl-impl bf-impl ival-impl
-                                   [nonffi-imlp #f] #:itype [itype #f] #:otype [otype #f])
-      (define nonffi* (if nonffi-imlp nonffi-imlp fl-impl))
+    (define (register-fx-operator! op op-name argc fl-impl
+                                   #:bf [bf-impl #f] #:ival [ival-impl #f]
+                                   #:nonffi [nonffi-imlp #f]
+                                   #:itype [itype #f] #:otype [otype #f])
+      (define base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl) (cons 'ival ival-impl)
+                              (cons 'ival ival-impl) (cons 'itype itype) (cons 'otype otype)))
+      (define info-dict (filter cdr base-dict))
       (define op-name* (sym-append op-name '.fx int '- frac))
-      (define info-dict
-        (let ([base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl)
-                               (cons 'ival ival-impl) (cons 'nonffi nonffi*))])
-          (cond
-            [(and itype otype) (dict-set* base-dict 'itype itype 'otype otype)]
-            [itype (dict-set base-dict 'itype itype)]
-            [otype (dict-set base-dict 'otype otype)]
-            [else base-dict])))
       (register-operator! op op-name* (make-list argc name) name info-dict))
   
     ; Representation
@@ -51,41 +47,35 @@
 
     ; Operators
 
-    (register-fx-operator! '- 'neg 1 - bf- ival-neg -)
-    (register-fx-operator! '+ '+ 2 (fx+ int frac) bf+ ival-add +)
-    (register-fx-operator! '- '- 2 (fx- int frac) bf- ival-sub -)
-    (register-fx-operator! '* '* 2 (fx* int frac) bf* ival-mult *)
-    (register-fx-operator! '/ '/ 2 (fx/ int frac) bf/ ival-div /)
-    (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac) bfsqrt ival-sqrt sqrt)
-    (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac) bfcbrt ival-cbrt (curryr expt 1/3))
-    (register-fx-operator! 'fabs 'fabs 1 abs bfabs ival-fabs abs)
+    (register-fx-operator! '- 'neg 1 -)
+    (register-fx-operator! '+ '+ 2 (fx+ int frac))
+    (register-fx-operator! '- '- 2 (fx- int frac))
+    (register-fx-operator! '* '* 2 (fx* int frac))
+    (register-fx-operator! '/ '/ 2 (fx/ int frac))
+    (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac))
+    (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac))
+    (register-fx-operator! 'fabs 'fabs 1 abs)
 
     ; (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
     ; (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
 
-    (register-fx-operator! 'exp 'exp 1 (fxexp int frac) bfexp ival-exp exp)
-    (register-fx-operator! 'log 'log 1 (fxlog int frac) bflog ival-log log)
-    (register-fx-operator! 'pow 'pow 2 (fxpow int frac) bfexpt ival-pow expt)
+    (register-fx-operator! 'exp 'exp 1 (fxexp int frac))
+    (register-fx-operator! 'log 'log 1 (fxlog int frac))
+    (register-fx-operator! 'pow 'pow 2 (fxpow int frac))
 
-    (register-fx-operator! 'sin 'sin 1 (fxsin int frac) bfsin ival-sin sin)
-    (register-fx-operator! 'cos 'cos 1 (fxcos int frac) bfcos ival-cos cos)
-    (register-fx-operator! 'tan 'tan 1 (fxtan int frac) bftan ival-tan tan)
-    (register-fx-operator! 'asin 'asin 1 (fxasin int frac) bfasin ival-asin asin)
-    (register-fx-operator! 'acos 'acos 1 (fxacos int frac) bfacos ival-acos acos)
-    (register-fx-operator! 'atan 'atan 1 (fxatan int frac) bfatan ival-atan atan)
+    (register-fx-operator! 'sin 'sin 1 (fxsin int frac))
+    (register-fx-operator! 'cos 'cos 1 (fxcos int frac))
+    (register-fx-operator! 'tan 'tan 1 (fxtan int frac))
+    (register-fx-operator! 'asin 'asin 1 (fxasin int frac))
+    (register-fx-operator! 'acos 'acos 1 (fxacos int frac))
+    (register-fx-operator! 'atan 'atan 1 (fxatan int frac))
 
-    (register-fx-operator! '== '== 2 (comparator =) (comparator bf=) (comparator ival-==)
-                           (comparator =)  #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '!= '!= 2 (inv-comparator =) (inv-comparator bf=) (comparator ival-==)
-                           (inv-comparator =) #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '< '< 2 (comparator <) (comparator bf<) (comparator ival-<)
-                           (comparator <) #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '> '> 2 (comparator >) (comparator bf>) (comparator ival->)
-                           (comparator >) #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '<= '<= 2 (comparator <=) (comparator bf<=) (comparator ival-<=)
-                           (comparator <=) #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '>= '>= 2 (comparator >=) (comparator bf>=) (comparator ival->=)
-                           (comparator >=) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '!= '!= 2 (inv-comparator =) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '< '< 2 (comparator <) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '> '> 2 (comparator >) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '<= '<= 2 (comparator <=) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '>= '>= 2 (comparator >=) #:itype name #:otype 'bool) ; override number of arguments
 
     #t]
    [_ #f]))
