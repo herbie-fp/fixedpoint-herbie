@@ -34,7 +34,7 @@
                               (cons 'ival ival-impl) (cons 'itype itype) (cons 'otype otype)))
       (define info-dict (filter cdr base-dict))
       (define op-name* (sym-append op-name '.fx int '- frac))
-      (register-operator! op op-name* (make-list argc name) name info-dict))
+      (register-operator-impl! op op-name* (make-list argc name) name info-dict))
   
     ; Representation
     (register-representation! name 'real fx?
