@@ -14,10 +14,6 @@
   (for/and ([left args] [right (cdr args)])
     (test left right)))
 
-(define ((inv-comparator test) . args)
-  (for/or ([left args] [right (cdr args)])
-    (not (test left right))))
-
 (define (sym-append . args)
   (string->symbol (apply string-append (map ~s args))))
 
@@ -47,7 +43,7 @@
 
     ; Operators
 
-    (register-fx-operator! '- 'neg 1 -)
+    (register-fx-operator! 'neg 'neg 1)
     (register-fx-operator! '+ '+ 2 (fx+ int frac))
     (register-fx-operator! '- '- 2 (fx- int frac))
     (register-fx-operator! '* '* 2 (fx* int frac))
@@ -71,7 +67,7 @@
     (register-fx-operator! 'atan 'atan 1 (fxatan int frac))
 
     (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
-    (register-fx-operator! '!= '!= 2 (inv-comparator =) #:itype name #:otype 'bool) ; override number of arguments
+    (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '< '< 2 (comparator <) #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '> '> 2 (comparator >) #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '<= '<= 2 (comparator <=) #:itype name #:otype 'bool) ; override number of arguments
