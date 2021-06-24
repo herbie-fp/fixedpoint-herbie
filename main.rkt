@@ -20,7 +20,7 @@
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
   (match name
-   [(list 'fixed int frac)
+   [(list 'fixed nbits scale)
 
     (define (register-fx-operator! op op-name argc fl-impl
                                    #:bf [bf-impl #f] #:ival [ival-impl #f]
@@ -29,42 +29,42 @@
       (define base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl) (cons 'ival ival-impl)
                               (cons 'ival ival-impl) (cons 'itype itype) (cons 'otype otype)))
       (define info-dict (filter cdr base-dict))
-      (define op-name* (sym-append op-name '.fx int '- frac))
+      (define op-name* (sym-append op-name '.fx nbits '- scale))
       (register-operator-impl! op op-name* (make-list argc name) name info-dict))
   
     ; Representation
     (register-representation! name 'real fx?
-      (curry bigfloat->fx int frac)
-      (curry fx->bigfloat int frac)
-      (curry ordinal->fx int frac)
-      (curry fx->ordinal int frac)
-      (+ int frac 1)
+      (curry bigfloat->fx nbits scale)
+      (curry fx->bigfloat nbits scale)
+      (curry ordinal->fx nbits scale)
+      (curry fx->ordinal nbits scale)
+      nbits
       (const #f))
 
     ; Operators
 
     (register-fx-operator! 'neg 'neg 1)
-    (register-fx-operator! '+ '+ 2 (fx+ int frac))
-    (register-fx-operator! '- '- 2 (fx- int frac))
-    (register-fx-operator! '* '* 2 (fx* int frac))
-    (register-fx-operator! '/ '/ 2 (fx/ int frac))
-    (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt int frac))
-    (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt int frac))
+    (register-fx-operator! '+ '+ 2 (fx+ nbits scale))
+    (register-fx-operator! '- '- 2 (fx- nbits scale))
+    (register-fx-operator! '* '* 2 (fx* nbits scale))
+    (register-fx-operator! '/ '/ 2 (fx/ nbits scale))
+    (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt nbits scale))
+    (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt nbits scale))
     (register-fx-operator! 'fabs 'fabs 1 abs)
 
-    ; (register-fx-operator! 'shl 'shl 2 (fxshl int frac) bfshl #f)
-    ; (register-fx-operator! 'shr 'shr 2 (fxshr int frac) bfshr #f)
+    ; (register-fx-operator! 'shl 'shl 2 (fxshl nbits scale) bfshl #f)
+    ; (register-fx-operator! 'shr 'shr 2 (fxshr nbits scale) bfshr #f)
 
-    (register-fx-operator! 'exp 'exp 1 (fxexp int frac))
-    (register-fx-operator! 'log 'log 1 (fxlog int frac))
-    (register-fx-operator! 'pow 'pow 2 (fxpow int frac))
+    (register-fx-operator! 'exp 'exp 1 (fxexp nbits scale))
+    (register-fx-operator! 'log 'log 1 (fxlog nbits scale))
+    (register-fx-operator! 'pow 'pow 2 (fxpow nbits scale))
 
-    (register-fx-operator! 'sin 'sin 1 (fxsin int frac))
-    (register-fx-operator! 'cos 'cos 1 (fxcos int frac))
-    (register-fx-operator! 'tan 'tan 1 (fxtan int frac))
-    (register-fx-operator! 'asin 'asin 1 (fxasin int frac))
-    (register-fx-operator! 'acos 'acos 1 (fxacos int frac))
-    (register-fx-operator! 'atan 'atan 1 (fxatan int frac))
+    (register-fx-operator! 'sin 'sin 1 (fxsin nbits scale))
+    (register-fx-operator! 'cos 'cos 1 (fxcos nbits scale))
+    (register-fx-operator! 'tan 'tan 1 (fxtan nbits scale))
+    (register-fx-operator! 'asin 'asin 1 (fxasin nbits scale))
+    (register-fx-operator! 'acos 'acos 1 (fxacos nbits scale))
+    (register-fx-operator! 'atan 'atan 1 (fxatan nbits scale))
 
     (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
     (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
