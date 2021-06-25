@@ -15,8 +15,25 @@
    [fx2+ (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fx2- (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fx2* (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
-   [fx2/ (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]))
+   [fx2/ (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
 
+   [fxnot (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxand (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxor (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxxor (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+
+   [fxsqrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxcbrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxexp (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxlog (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxpow (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxsin (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxcos (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxtan (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxasin (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxacos (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
+   [fxatan (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]))
+   
 
 (module+ test (require rackunit))
 
@@ -47,7 +64,7 @@
   (define-values (hi lo) (limits sign? nbits scale))
   (cond
    [(nan? x) x]
-   [(<= lo x hi) (inexact->exact (round (/ x (expt 2 scale))))]
+   [(<= lo x hi) (inexact->exact (truncate (/ x (expt 2 scale))))]
    [else (clamp x lo hi)]))
 
 (define ((fx->ordinal sign? nbits scale) x)
@@ -84,7 +101,56 @@
 
 (define ((fx2/ sign? nbits scale) x y)
   (define-values (hi lo) (limits sign? nbits scale))
-  (clamp (round (/ x y (expt 2 scale))) lo hi))
+  (clamp (truncate (/ x y (expt 2 scale))) lo hi))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bitwise ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define ((fxnot sign? nbits scale) x)
+  (let ([x* (bitwise-not x)])
+    (if (and (not sign?) (negative? x*))
+        (+ x* (expt 2 nbits))
+        x*)))
+
+(define ((fxand sign? nbits scale) x y)
+  (bitwise-and x y))
+
+(define ((fxor sign? nbits scale) x y)
+  (bitwise-ior x y))
+
+(define ((fxxor sign? nbits scale) x y)
+  (bitwise-xor x y))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Math functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define ((fx-1ary-op sign? nbits scale f) x)
+  (let ([x* ((fx->real sign? nbits scale) x)])
+    ((real->fx sign? nbits scale) (f x*))))
+
+(define ((fx-2ary-op sign? nbits scale f) x y)
+  (let ([x* ((fx->real sign? nbits scale) x)]
+        [y* ((fx->real sign? nbits scale) y)])
+    ((real->fx sign? nbits scale) (f x* y*))))
+
+(define-syntax-rule (fx-1ary-ops [fx-op real-op] ...)
+  (begin (define fx-op (curryr fx-1ary-op real-op)) ...))
+
+(define-syntax-rule (fx-2ary-ops [fx-op real-op] ...)
+  (begin (define fx-op (curryr fx-2ary-op real-op)) ...))
+
+(fx-1ary-ops
+ [fxsqrt sqrt]
+ [fxcbrt (curryr expt 1/3)]
+ [fxexp exp]
+ [fxlog log]
+ [fxsin sin]
+ [fxcos cos]
+ [fxtan tan]
+ [fxasin asin]
+ [fxacos acos]
+ [fxatan atan])
+
+(fx-2ary-ops
+ [fxpow expt])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Unit tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
