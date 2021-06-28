@@ -41,6 +41,11 @@
  (band x y))
 
 (FPCore (x y)
- :name "demorgan's, integer"
+ :name "demorgans 1, integer"
  :precision integer
  (bnot (bor x y)))
+
+(FPCore (x y)
+ :name "demorgans 2, integer"
+ :precision integer
+ (bnot (band x y)))
