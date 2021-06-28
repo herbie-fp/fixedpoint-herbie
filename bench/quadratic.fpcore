@@ -1,0 +1,26 @@
+(FPCore discr (a b c)
+ :name "discriminant"
+ :precision integer
+ (sqrt (- (* b b) (* 4 (* a c)))))
+
+(FPCore (a b c)
+ :name "quadp (p42, positive)"
+ :precision integer
+ (/ (+ (- b) (discr a b c)) (* 2 a)))
+
+(FPCore (a b c)
+ :name "quadm (p42, negative)"
+ :precision integer
+ (/ (- (- b) (discr a b c)) (* 2 a)))
+
+(FPCore (a b_2 c)
+ :name "quad2m (problem 3.2.1, negative)"
+ :precision integer
+ (let ([d (sqrt (- (* b_2 b_2) (* a c)))])
+   (/ (- (- b_2) d) a)))
+
+(FPCore (a b_2 c)
+ :name "quad2p (problem 3.2.1, positive)"
+ :precision integer
+ (let ([d (sqrt (- (* b_2 b_2) (* a c)))])
+   (/ (+ (- b_2) d) a)))

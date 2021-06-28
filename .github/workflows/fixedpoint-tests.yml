@@ -24,6 +24,6 @@ jobs:
       - name: "Install fixedpoint-herbie"
         run: raco pkg install --no-cache --auto --name fixedpoint-herbie plugin/
       - name: "Benchmarks"
-        run: racket herbie/infra/travis.rkt --seed 0 plugin/bench/
+        run: racket herbie/infra/travis.rkt --seed 0 plugin/bench/fixed.fpcore
         env:
           RUST_BACKTRACE: full

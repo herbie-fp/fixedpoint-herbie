@@ -165,6 +165,11 @@
 (define (log/safe x)
   (if (positive? x) (log x) +nan.0))
 
+(define (expt/safe x y)
+  (cond
+   [(and (zero? x) (negative? y)) +nan.0]
+   [else (expt x y)]))
+
 (define (no-complex x)
   (if (real? x) x +nan.0))
 
@@ -197,7 +202,7 @@
  [fxatan atan])
 
 (fx-2ary-ops
- [fxpow expt])
+ [fxpow expt/safe])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Unit tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -221,16 +226,21 @@
   (check-equal? ((ordinal->fx #t 32 4) 16) -2147483632)
 
   ; fx->ordinal
-  (check-equal? ((fx->bigfloat #t 16 0) 16) (bf 16))
-  (check-equal? ((fx->bigfloat #t 32 0) 32) (bf 32))
-  (check-equal? ((fx->bigfloat #t 32 2) 4) (bf 16))
-  (check-equal? ((fx->bigfloat #t 32 4) 1) (bf 16))
+  (check-equal? ((fx->ordinal #t 16 0) 0) 32768)
+  (check-equal? ((fx->ordinal #t 16 4) 0) 32768)
+  (check-equal? ((fx->ordinal #t 32 2) 100) 2147483748)
 
   ; bigfloat->fx
   (check-equal? ((bigfloat->fx #t 16 0) (bf 16)) 16)
   (check-equal? ((bigfloat->fx #t 32 0) (bf 32)) 32)
   (check-equal? ((bigfloat->fx #t 32 2) (bf 16)) 4)
   (check-equal? ((bigfloat->fx #t 32 4) (bf 16)) 1)
+
+  ; fx->bigfloat
+  (check-equal? ((fx->bigfloat #t 16 0) 16) (bf 16))
+  (check-equal? ((fx->bigfloat #t 32 0) 32) (bf 32))
+  (check-equal? ((fx->bigfloat #t 32 2) 4) (bf 16))
+  (check-equal? ((fx->bigfloat #t 32 4) 1) (bf 16))
 
   ; fx2+
   (check-equal? ((fx2+ #t 16 0) 16 32) 48)
