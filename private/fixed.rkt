@@ -44,6 +44,13 @@
     (values (if sign? (- (* 2scale (expt 2 (- nbits 1)))) 0)
             (* 2scale (- (expt 2 (- nbits (if sign? 1 0))) 1)))))
 
+;;; (define ((check-bounds! sign? nbits scale) x)
+;;;   (define-values (lo hi) (limits sign? nbits scale))
+;;;   (define lo* (/ lo (expt 2 scale)))
+;;;   (define hi* (/ hi (expt 2 scale)))
+;;;   (unless (or (<= lo* x hi*) (nan? x))
+;;;     (error 'check-bounds! "Not in range: ~a\n" x)))
+
 (define ((normalize sign? nbits scale) x)
   (cond
    [(nan? x) x]
@@ -62,32 +69,43 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Conversions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define ((fx->real sign? nbits scale) x)
-  (cond [(nan? x) x]
-        [else (* x (expt 2 scale))]))
+  (cond
+   [(nan? x) x]
+   [else (* x (expt 2 scale))]))
 
-(define ((real->fx sign? nbits scale) x)
+(define ((real->fx* sign? nbits scale) x)
   (define-values (lo hi) (limits sign? nbits scale))
   (cond
    [(nan? x) x]
-   [(> x hi) (/ hi (expt 2 scale))]
-   [(< x lo) (/ lo (expt 2 scale))]
+   [(>= x hi) (/ hi (expt 2 scale))]
+   [(<= x lo) (/ lo (expt 2 scale))]
    [else (inexact->exact (truncate (/ x (expt 2 scale))))]))
+
+(define ((real->fx sign? nbits scale) x)
+  ((real->fx* sign? nbits scale) x))
 
 (define ((fx->ordinal sign? nbits scale) x)
   (cond
-   [(nan? x) (expt 2 nbits)]
-   [sign? (+ x (expt 2 (- nbits 1)))]
-   [else x]))
+   [(nan? x)  (expt 2 nbits)]
+   [else
+    (define-values (lo hi) (limits sign? nbits scale))
+    (define lo* (/ lo (expt 2 scale)))
+    (define hi* (/ hi (expt 2 scale)))
+    (cond   ; TODO: first two should never fire, bug exists
+     [(< x lo*) 0]    
+     [(> x hi*) (- (expt 2 nbits) 1)]
+     [sign? (+ x (expt 2 (- nbits 1)))]
+     [else x])]))
 
 (define ((ordinal->fx sign? nbits scale) x)
   (define nan-ord (expt 2 nbits))
   (cond
-   [(< x 0) 
+   [(< x 0)
     (define-values (lo hi) (limits sign? nbits scale))
-    lo]
+    (/ lo (expt 2 scale))]
    [(> x nan-ord)
     (define-values (lo hi) (limits sign? nbits scale))
-    hi]
+    (/ hi (expt 2 scale))]
    [(= x nan-ord) +nan.0]
    [sign? (- x (expt 2 (- nbits 1)))]
    [else x]))
@@ -101,19 +119,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Arithmetic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define ((fx2+ sign? nbits scale) x y)
-  (define-values (lo hi) (limits sign? nbits scale))
   ((normalize sign? nbits scale) (+ x y)))
 
 (define ((fx2- sign? nbits scale) x y)
-  (define-values (lo hi) (limits sign? nbits scale))
   ((normalize sign? nbits scale) (- x y)))
 
 (define ((fx2* sign? nbits scale) x y)
-  (define-values (lo hi) (limits sign? nbits scale))
   ((normalize sign? nbits scale) (* x y (expt 2 scale))))
 
 (define ((fx2/ sign? nbits scale) x y)
-  (define-values (lo hi) (limits sign? nbits scale))
   (if (zero? y)
       +nan.0
       ((normalize sign? nbits scale) (/ x y (expt 2 scale)))))
@@ -146,12 +160,12 @@
 
 (define ((fx-1ary-op sign? nbits scale f) x)
   (let ([x* ((fx->real sign? nbits scale) x)])
-    ((normalize sign? nbits scale) (no-complex (f x*)))))
+    ((real->fx sign? nbits scale) (no-complex (f x*)))))
 
 (define ((fx-2ary-op sign? nbits scale f) x y)
   (let ([x* ((fx->real sign? nbits scale) x)]
         [y* ((fx->real sign? nbits scale) y)])
-    ((normalize sign? nbits scale) (no-complex (f x* y*)))))
+    ((real->fx sign? nbits scale) (no-complex (f x* y*)))))
 
 (define-syntax-rule (fx-1ary-ops [fx-op real-op] ...)
   (begin (define fx-op (curryr fx-1ary-op real-op)) ...))
