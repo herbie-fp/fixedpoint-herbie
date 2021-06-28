@@ -53,9 +53,6 @@
     (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt #t nbits scale))
     (register-fx-operator! 'fabs 'fabs 1 abs)
 
-    ; (register-fx-operator! 'shl 'shl 2 (fxshl nbits scale) bfshl #f)
-    ; (register-fx-operator! 'shr 'shr 2 (fxshr nbits scale) bfshr #f)
-
     (register-fx-operator! 'exp 'exp 1 (fxexp #t nbits scale))
     (register-fx-operator! 'log 'log 1 (fxlog #t nbits scale))
     (register-fx-operator! 'pow 'pow 2 (fxpow #t nbits scale))

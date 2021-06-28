@@ -149,6 +149,17 @@
 (define ((fxxor sign? nbits scale) x y)
   (bitwise-xor x y))
 
+; First argument is fixed-point
+; Second argument is integer
+;
+;;; (define ((fxshl sign? nbits scale) x y)
+;;;   (define mask (- (expt 2 nbits) 1))
+;;;   (bitwise-and mask (arithmetic-shift x y)))
+
+;;; (define ((fxshr sign? nbits scale) x y)
+;;;   (define mask (- (expt 2 nbits) 1))
+;;;   (bitwise-and mask (arithmetic-shift x (- y)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Math functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (log/safe x)

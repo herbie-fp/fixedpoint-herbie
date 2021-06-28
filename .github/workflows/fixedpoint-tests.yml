@@ -20,7 +20,10 @@ jobs:
           path: herbie
           ref: ${{ github.event.client_payload.branch }}
       - name: "Install Herbie"
-        run: raco pkg install --no-cache --auto --name herbie herbie/src/
-      - run: racket herbie/infra/travis.rkt --precision integer --seed 0 plugin/bench/integer.fpcore
+        run: make install -C herbie/
+      - name: "Install fixedpoint-herbie"
+        run: raco pkg install --no-cache --auto --name fixedpoint-herbie plugin/
+      - name: "Benchmarks"
+        run: racket herbie/infra/travis.rkt --seed 0 plugin/bench/
         env:
           RUST_BACKTRACE: full
