@@ -73,7 +73,7 @@
    [(nan? x) x]
    [else (* x (expt 2 scale))]))
 
-(define ((real->fx* sign? nbits scale) x)
+(define ((real->fx sign? nbits scale) x)
   (define-values (lo hi) (limits sign? nbits scale))
   (cond
    [(nan? x) x]
@@ -81,21 +81,11 @@
    [(<= x lo) (/ lo (expt 2 scale))]
    [else (inexact->exact (truncate (/ x (expt 2 scale))))]))
 
-(define ((real->fx sign? nbits scale) x)
-  ((real->fx* sign? nbits scale) x))
-
 (define ((fx->ordinal sign? nbits scale) x)
   (cond
    [(nan? x)  (expt 2 nbits)]
-   [else
-    (define-values (lo hi) (limits sign? nbits scale))
-    (define lo* (/ lo (expt 2 scale)))
-    (define hi* (/ hi (expt 2 scale)))
-    (cond   ; TODO: first two should never fire, bug exists
-     [(< x lo*) 0]    
-     [(> x hi*) (- (expt 2 nbits) 1)]
-     [sign? (+ x (expt 2 (- nbits 1)))]
-     [else x])]))
+   [sign? (+ x (expt 2 (- nbits 1)))]
+   [else x]))
 
 (define ((ordinal->fx sign? nbits scale) x)
   (define nan-ord (expt 2 nbits))
