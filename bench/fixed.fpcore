@@ -12,3 +12,35 @@
  :name "Associativity, fx32,4"
  :precision (fixed 32 4)
  (/ (* x 200) y))
+
+(FPCore (x y)
+ :name "ldexp"
+ :precision binary64
+ :pre (< -100 y 100)
+ :herbie-conversions ((binary64 integer))
+ (* x (pow 2 y)))
+
+(FPCore (x)
+ :name "not, integer"
+ :precision integer
+ (bnot x))
+
+ (FPCore (x y)
+ :name "or, integer"
+ :precision integer
+ (bor x y))
+
+ (FPCore (x y)
+ :name "xor, integer"
+ :precision integer
+ (bxor x y))
+
+(FPCore (x y)
+ :name "and, integer"
+ :precision integer
+ (band x y))
+
+(FPCore (x y)
+ :name "demorgan's, integer"
+ :precision integer
+ (bnot (bor x y)))
