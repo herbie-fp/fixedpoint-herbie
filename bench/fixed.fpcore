@@ -1,17 +1,19 @@
 (FPCore (x y)
  :name "Associativity, fx16,0"
  :precision (fixed 16 0)
- (/ (* x 3.5) y))
+ (/ (* x 8) y))
 
 (FPCore (x y)
- :name "Associativity, fx32,2"
- :precision (fixed 32 2)
- (/ (* x 28) y))
+ :name "Associativity, fx16,2"
+ :precision (fixed 16 2)
+ :herbie-target (/ x (/ y 16))
+ (/ (* x 16) y))
 
 (FPCore (x y)
- :name "Associativity, fx32,4"
- :precision (fixed 32 4)
- (/ (* x 200) y))
+ :name "Associativity, fx16,4"
+ :precision (fixed 16 4)
+ :herbie-target (/ x (/ y 32))
+ (/ (* x 32) y))
 
 (FPCore (x y)
  :name "ldexp"

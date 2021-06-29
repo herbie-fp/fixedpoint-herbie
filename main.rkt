@@ -1,6 +1,6 @@
 #lang racket
 
-(require herbie/plugin math/bigfloat rival)
+(require herbie/plugin math/bigfloat math/flonum rival)
 (require "private/fixed.rkt")
 
 (eprintf "Loading fixed-point support...\n")
@@ -55,7 +55,7 @@
 
 (require (submod "." hairy))
 
-;; Integer-specific operators and rules
+;; 32-bit integer operators and rules
 (define (generate-int32)
 
   ; Operators
@@ -89,6 +89,18 @@
   (register-operator-impl! 'shr 'shr.fx32-0 (list 'integer 'integer) 'integer
     `((fl . ,(fxshr #t 32 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t 32 0))))
 
+  (register-operator-impl! 'cast 'binary64->integer (list 'binary64) 'integer
+    `((fl . ,(compose (real->fx #t 32 0) truncate))))
+
+  (register-operator-impl! 'cast 'binary32->integer (list 'binary32) 'integer
+    `((fl . ,(compose (real->fx #t 32 0) truncate))))
+
+  (register-operator-impl! 'cast 'integer->binary64 (list 'integer) 'binary64
+    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
+
+  (register-operator-impl! 'cast 'integer->binary32 (list 'integer) 'binary32
+    `((fl . ,(compose flsingle real->double-flonum (fx->real #t 32 0)))))
+
   ; Rules
 
   (when ldexp
@@ -104,9 +116,55 @@
   ; Hacker's Delight: average of two integers
   (register-ruleset! 'average-int '(arithmetic integer)
     '((a . integer) (b . integer))
-    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   (+.fx32-0 (+.fx32-0 (and.fx32-0 a b) (shr.fx32-0 (xor.fx32-0 a b) 1))
-                                                          (and.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (and.fx32-0 a b) (shr.fx32-0 (xor.fx32-0 a b) 1)) 63))
-                                                                      (xor.fx32-0 a b))))))
+    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)
+                  (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
+                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 63))
+                                         (bxor.fx32-0 a b))))))
+
+  #t)
+
+; 64-bit integer operators and rules
+(define (generate-int64)
+
+  ; Operator implementations
+
+  (register-operator-impl! 'cast 'binary64->integer_64 (list 'binary64) '(integer 64)
+    `((fl . ,(compose (real->fx #t 64 0) truncate))))
+
+  (register-operator-impl! 'cast 'integer_64->binary64 (list '(integer 64)) 'binary64
+    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
+
+  (define (reinterpret-as-double x)
+    (cond
+     [(nan? x) +nan.0]
+     [else (floating-point-bytes->real (integer->integer-bytes x 8 #t))]))
+
+  (define (reinterpret-as-int64 x)
+     (integer-bytes->integer (real->floating-point-bytes x 8) #t))
+
+  (define (bfreinterpret-as-double x)
+    (let ([x* (bigfloat->integer x)])
+      (bf (floating-point-bytes->real (integer->integer-bytes x* 8 #t)))))
+
+  (define (bfreinterpret-as-int64 x)
+    (let ([x* (bigfloat->real x)])
+      (bf (integer-bytes->integer (real->floating-point-bytes x* 8) #t))))
+
+  ;;; (register-operator-impl! 'cast 'reinterpret_int64_double (list '(integer 64)) 'binary64
+  ;;;   `((fl . ,reinterpret-as-double) (bf . ,bfreinterpret-as-double)
+  ;;;     (nonffi . ,reinterpret-as-double)))
+
+  ;;; (register-operator-impl! 'cast 'reinterpret_double_int64 (list 'binary64) '(integer 64)
+  ;;;   `((fl . ,reinterpret-as-int64) (bf . ,bfreinterpret-as-int64)
+  ;;;     (nonffi . ,reinterpret-as-int64)))
+
+  ; Rules
+
+  ;;; Taylor phase messes this up
+  ;;; (register-ruleset! 'reinterpret_binary64_integer64 '(arithmetic integer)
+  ;;;   '((a . binary64) '(b . (integer 64)))
+  ;;;   '((insert_integer64   a     (reinterpret_int64_double (reinterpret_double_int64 a)))
+  ;;;     (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
 
   #t)
 
@@ -268,7 +326,9 @@
    ['integer
     (generate-fixed-point* 32 0 name)
     (generate-int32)]
-   [(list 'integer n) (generate-fixed-point* n 0 name)]
+   [(list 'integer n)
+    (generate-fixed-point* n 0 name)
+    (when (= n 64) (generate-int64))]
    [_ #f]))
 
 (register-generator! generate-integer)
