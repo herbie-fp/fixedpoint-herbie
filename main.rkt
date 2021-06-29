@@ -12,6 +12,20 @@
 (define (sym-append . args)
   (string->symbol (apply string-append (map ~s args))))
 
+(define at-least-racket-8?
+  (>= (string->number (substring (version) 0 1)) 8))
+
+; Need a placeholder for < 8.0
+(define cast-single
+  (let ([flsingle identity])
+    (local-require racket/flonum)
+    flsingle))
+
+(define (->float32 x)
+  (if at-least-racket-8?
+      (cast-single (exact->inexact x))
+      (real->single-flonum x)))
+
 ;; Common ops
 
 ; bitwise ops (must override `bf` to use)
@@ -99,7 +113,7 @@
     `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
 
   (register-operator-impl! 'cast 'integer->binary32 (list 'integer) 'binary32
-    `((fl . ,(compose flsingle real->double-flonum (fx->real #t 32 0)))))
+    `((fl . ,(compose ->float32 real->double-flonum (fx->real #t 32 0)))))
 
   ; Rules
 
