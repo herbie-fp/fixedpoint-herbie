@@ -21,6 +21,8 @@
    [fxand (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fxor (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fxxor (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxshl (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxshr (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
 
    [fxsqrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
    [fxcbrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
@@ -139,30 +141,26 @@
 (define ((fxxor sign? nbits scale) x y)
   (bitwise-xor x y))
 
-; First argument is fixed-point
-; Second argument is integer
-;
-;;; (define ((fxshl sign? nbits scale) x y)
-;;;   (define mask (- (expt 2 nbits) 1))
-;;;   (bitwise-and mask (arithmetic-shift x y)))
+(define ((fxshl sign? nbits scale) x y)
+  (cond
+   [(negative? y) ((fxshr sign? nbits scale) x (- y))]
+   [else
+    (define r (arithmetic-shift (bitwise-bit-field x 0 nbits) y))
+    (* (bitwise-bit-field r 0 (- nbits 1))
+      (if (bitwise-bit-set? r (- nbits 1)) -1 1))]))
 
-;;; (define ((fxshr sign? nbits scale) x y)
-;;;   (define mask (- (expt 2 nbits) 1))
-;;;   (bitwise-and mask (arithmetic-shift x (- y)))
+(define ((fxshr sign? nbits scale) x y)
+  (cond
+   [(negative? y) ((fxshl sign? nbits scale) x (- y))]
+   [else (arithmetic-shift x (- y))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Math functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (log/safe x)
   (if (positive? x) (log x) +nan.0))
 
-(define (expt/safe x y)
-  (cond
-   [(and (zero? x) (negative? y)) +nan.0]
-   [else (expt x y)]))
-
 (define (no-complex x)
   (if (real? x) x +nan.0))
-
 
 (define ((fx-1ary-op sign? nbits scale f) x)
   (let ([x* ((fx->real sign? nbits scale) x)])
@@ -191,8 +189,23 @@
  [fxacos acos]
  [fxatan atan])
 
-(fx-2ary-ops
- [fxpow expt/safe])
+(define ((fxpow sign? nbits scale) x y)
+  (define x* ((fx->real sign? nbits scale) x))
+  (define y* ((fx->real sign? nbits scale) y))
+  (cond
+   [(or (nan? x*) (nan? y*)) +nan.0]
+   [(zero? x*)    ; special case: 0^y
+    (cond
+     [(negative? y*) +nan.0]
+     [(zero? y*) ((real->fx sign? nbits scale) 1)]
+     [else ((real->fx sign? nbits scale) 0)])]
+   [else
+    (define b (inexact->exact (ceiling (log (abs x*) 2))))
+    ((real->fx sign? nbits scale)
+      (cond
+       [(and (negative? y*) (> (abs y*) (abs scale))) 0]                        ; underflow to 0
+       [(> (* b y*) nbits) (if (and (negative? x*) (odd? y*)) -inf.0 +inf.0)]   ; overflow to inf
+       [else (no-complex (expt x* y*))]))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Unit tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

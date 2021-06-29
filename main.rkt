@@ -28,6 +28,12 @@
 (define-operator (band real real) real
   [bf #f] [ival #f] [nonffi bitwise-and])
 
+(define-operator (shl real real) real
+  [bf #f] [ival #f] [nonffi arithmetic-shift])
+
+(define-operator (shr real real) real
+  [bf #f] [ival #f] [nonffi arithmetic-shift])
+
 ;; Integer 
 
 (define (bfldexp x y)
@@ -51,31 +57,56 @@
 
 ;; Integer-specific operators and rules
 (define (generate-int32)
+
+  ; Operators
+
   (register-operator! 'ldexp (list 'real 'real) 'real
     `((bf . ,bfldexp) (ival . ,ival-ldexp) (nonffi . ,nonffi-ldexp)))
 
+  ; Operator implementations
+
   (when ldexp
     (register-operator-impl! 'ldexp 'ldexp.f64 (list 'binary64 'integer) 'binary64
-      `((fl . ,ldexp)))
+      `((fl . ,ldexp))))
 
+  (when ldexpf
+    (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
+      `((fl . ,ldexpf))))
+
+  (define (bfshl x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshl #t 32 0) x* y*))))
+
+  (define (bfshr x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshr #t 32 0) x* y*))))
+
+  (register-operator-impl! 'shl 'shl.fx32-0 (list 'integer 'integer) 'integer
+    `((fl . ,(fxshl #t 32 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t 32 0))))
+
+  (register-operator-impl! 'shr 'shr.fx32-0 (list 'integer 'integer) 'integer
+    `((fl . ,(fxshr #t 32 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t 32 0))))
+
+  ; Rules
+
+  (when ldexp
     (register-ruleset! 'ldexp-f64 '(arithmetic) '((x . binary64) (y . binary64))
       '((ldexp_binary64 (*.f64 x (pow.f64 2 y)) (ldexp.f64 x (binary64->integer y)))
         (un_ldexp_binary64 (ldexp.f64 x (binary64->integer y)) (*.f64 x (pow.f64 2 y))))))
 
   (when ldexpf
-    (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
-      `((fl . ,ldexpf)))
-    
     (register-ruleset! 'ldexp-f32 '(arithmetic) '((x . binary32) (y . binary32))
       '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
 
   ; Hacker's Delight: average of two integers
-  ;;; (define-ruleset average-i32 (arithmetic integer numerics)
-  ;;; #:type ([a integer] [b integer])
-  ;;; [i32-avg2   (/.i32 (+.i32 a b) 2)   (+.i32 (+.i32 (and.i32 a b) (shr.i32 (xor.i32 a b) 1)) 
-  ;;;                                          (and.i32 (neg.i32 (shr.i32 (+.i32 (and.i32 a b) (shr.i32 (xor.i32 a b) 1)) 63))
-  ;;;                                                   (xor.i32 a b)))])
+  (register-ruleset! 'average-int '(arithmetic integer)
+    '((a . integer) (b . integer))
+    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   (+.fx32-0 (+.fx32-0 (and.fx32-0 a b) (shr.fx32-0 (xor.fx32-0 a b) 1))
+                                                          (and.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (and.fx32-0 a b) (shr.fx32-0 (xor.fx32-0 a b) 1)) 63))
+                                                                      (xor.fx32-0 a b))))))
 
   #t)
 

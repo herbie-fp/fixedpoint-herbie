@@ -49,3 +49,8 @@
  :name "demorgans 2, integer"
  :precision integer
  (bnot (band x y)))
+
+(FPCore (x y)
+ :name "average, integer"
+ :precision integer
+ (/ (+ x y) 2))
