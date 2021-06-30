@@ -29,7 +29,6 @@
 ;; Common ops
 
 ; bitwise ops (must override `bf` to use)
-
 (define-operator (bnot real) real
   [bf #f] [ival #f] [nonffi bitwise-not])
 
@@ -48,139 +47,10 @@
 (define-operator (shr real real) real
   [bf #f] [ival #f] [nonffi arithmetic-shift])
 
-;; Integer 
-
-(define (bfldexp x y)
-  (bf* x (bfexpt 2.bf y)))
-
-(define (ival-ldexp x y)
-  (ival-mult x (ival-pow (mk-ival 2.bf) y)))
-
-(define (nonffi-ldexp x y)
-  (* x (expt 2 y)))
-
-(module hairy racket/base
-  (require ffi/unsafe)
-  (provide ldexp ldexpf)
-
-  (define ldexp (get-ffi-obj 'ldexp #f (_fun _double _int -> _double)))
-  (define ldexpf (get-ffi-obj 'ldexpf #f (_fun _float _int -> _float)))
-)
-
-(require (submod "." hairy))
-
-;; 32-bit integer operators and rules
-(define (generate-int32)
-
-  ; Operators
-
-  (register-operator! 'ldexp (list 'real 'real) 'real
-    `((bf . ,bfldexp) (ival . ,ival-ldexp) (nonffi . ,nonffi-ldexp)))
-
-  ; Operator implementations
-
-  (when ldexp
-    (register-operator-impl! 'ldexp 'ldexp.f64 (list 'binary64 'integer) 'binary64
-      `((fl . ,ldexp))))
-
-  (when ldexpf
-    (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
-      `((fl . ,ldexpf))))
-
-  (define (bfshl x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshl #t 32 0) x* y*))))
-
-  (define (bfshr x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshr #t 32 0) x* y*))))
-
-  (register-operator-impl! 'shl 'shl.fx32-0 (list 'integer 'integer) 'integer
-    `((fl . ,(fxshl #t 32 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t 32 0))))
-
-  (register-operator-impl! 'shr 'shr.fx32-0 (list 'integer 'integer) 'integer
-    `((fl . ,(fxshr #t 32 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t 32 0))))
-
-  (register-operator-impl! 'cast 'binary64->integer (list 'binary64) 'integer
-    `((fl . ,(compose (real->fx #t 32 0) truncate))))
-
-  (register-operator-impl! 'cast 'binary32->integer (list 'binary32) 'integer
-    `((fl . ,(compose (real->fx #t 32 0) truncate))))
-
-  (register-operator-impl! 'cast 'integer->binary64 (list 'integer) 'binary64
-    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
-
-  (register-operator-impl! 'cast 'integer->binary32 (list 'integer) 'binary32
-    `((fl . ,(compose ->float32 real->double-flonum (fx->real #t 32 0)))))
-
-  ; Rules
-
-  (when ldexp
-    (register-ruleset! 'ldexp-f64 '(arithmetic) '((x . binary64) (y . binary64))
-      '((ldexp_binary64 (*.f64 x (pow.f64 2 y)) (ldexp.f64 x (binary64->integer y)))
-        (un_ldexp_binary64 (ldexp.f64 x (binary64->integer y)) (*.f64 x (pow.f64 2 y))))))
-
-  (when ldexpf
-    (register-ruleset! 'ldexp-f32 '(arithmetic) '((x . binary32) (y . binary32))
-      '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
-        (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
-
-  ; Hacker's Delight: average of two integers
-  (register-ruleset! 'average-int '(arithmetic integer)
-    '((a . integer) (b . integer))
-    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)
-                  (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
-                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 63))
-                                         (bxor.fx32-0 a b))))))
-
-  #t)
-
-; 64-bit integer operators and rules
-(define (generate-int64)
-
-  ; Operator implementations
-
-  (register-operator-impl! 'cast 'binary64->integer_64 (list 'binary64) '(integer 64)
-    `((fl . ,(compose (real->fx #t 64 0) truncate))))
-
-  (register-operator-impl! 'cast 'integer_64->binary64 (list '(integer 64)) 'binary64
-    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
-
-  (define (reinterpret-as-double x)
-    (cond
-     [(nan? x) +nan.0]
-     [else (floating-point-bytes->real (integer->integer-bytes x 8 #t))]))
-
-  (define (reinterpret-as-int64 x)
-     (integer-bytes->integer (real->floating-point-bytes x 8) #t))
-
-  (define (bfreinterpret-as-double x)
-    (let ([x* (bigfloat->integer x)])
-      (bf (floating-point-bytes->real (integer->integer-bytes x* 8 #t)))))
-
-  (define (bfreinterpret-as-int64 x)
-    (let ([x* (bigfloat->real x)])
-      (bf (integer-bytes->integer (real->floating-point-bytes x* 8) #t))))
-
-  ;;; (register-operator-impl! 'cast 'reinterpret_int64_double (list '(integer 64)) 'binary64
-  ;;;   `((fl . ,reinterpret-as-double) (bf . ,bfreinterpret-as-double)
-  ;;;     (nonffi . ,reinterpret-as-double)))
-
-  ;;; (register-operator-impl! 'cast 'reinterpret_double_int64 (list 'binary64) '(integer 64)
-  ;;;   `((fl . ,reinterpret-as-int64) (bf . ,bfreinterpret-as-int64)
-  ;;;     (nonffi . ,reinterpret-as-int64)))
-
-  ; Rules
-
-  ;;; Taylor phase messes this up
-  ;;; (register-ruleset! 'reinterpret_binary64_integer64 '(arithmetic integer)
-  ;;;   '((a . binary64) '(b . (integer 64)))
-  ;;;   '((insert_integer64   a     (reinterpret_int64_double (reinterpret_double_int64 a)))
-  ;;;     (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
-
-  #t)
+; reinterpret
+(define-operator (reinterpret real) real
+  [bf identity] [ival identity] [nonffi identity])
+  
 
 ; General fixed-point operations
 (define (generate-fixed-point* nbits scale name)
@@ -327,6 +197,142 @@
       (,(fx-name 'eliminate-and-or-r)     (,band (,bor x y) x)    x)))
 
   #t)
+
+;; Integer 
+
+(define (bfldexp x y)
+  (bf* x (bfexpt 2.bf y)))
+
+(define (ival-ldexp x y)
+  (ival-mult x (ival-pow (mk-ival 2.bf) y)))
+
+(define (nonffi-ldexp x y)
+  (* x (expt 2 y)))
+
+(module hairy racket/base
+  (require ffi/unsafe)
+  (provide ldexp ldexpf)
+
+  (define ldexp (get-ffi-obj 'ldexp #f (_fun _double _int -> _double)))
+  (define ldexpf (get-ffi-obj 'ldexpf #f (_fun _float _int -> _float)))
+)
+
+(require (submod "." hairy))
+
+;; 32-bit integer operators and rules
+(define (generate-int32)
+
+  ; Operators
+
+  (register-operator! 'ldexp (list 'real 'real) 'real
+    `((bf . ,bfldexp) (ival . ,ival-ldexp) (nonffi . ,nonffi-ldexp)))
+
+  ; Operator implementations
+
+  (when ldexp
+    (register-operator-impl! 'ldexp 'ldexp.f64 (list 'binary64 'integer) 'binary64
+      `((fl . ,ldexp))))
+
+  (when ldexpf
+    (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
+      `((fl . ,ldexpf))))
+
+  (define (bfshl x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshl #t 32 0) x* y*))))
+
+  (define (bfshr x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshr #t 32 0) x* y*))))
+
+  (register-operator-impl! 'shl 'shl.fx32-0 (list 'integer 'integer) 'integer
+    `((fl . ,(fxshl #t 32 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t 32 0))))
+
+  (register-operator-impl! 'shr 'shr.fx32-0 (list 'integer 'integer) 'integer
+    `((fl . ,(fxshr #t 32 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t 32 0))))
+
+  (register-operator-impl! 'cast 'binary64->integer (list 'binary64) 'integer
+    `((fl . ,(compose (real->fx #t 32 0) truncate))))
+
+  (register-operator-impl! 'cast 'binary32->integer (list 'binary32) 'integer
+    `((fl . ,(compose (real->fx #t 32 0) truncate))))
+
+  (register-operator-impl! 'cast 'integer->binary64 (list 'integer) 'binary64
+    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
+
+  (register-operator-impl! 'cast 'integer->binary32 (list 'integer) 'binary32
+    `((fl . ,(compose ->float32 real->double-flonum (fx->real #t 32 0)))))
+
+  ; Rules
+
+  (when ldexp
+    (register-ruleset! 'ldexp-f64 '(arithmetic) '((x . binary64) (y . binary64))
+      '((ldexp_binary64 (*.f64 x (pow.f64 2 y)) (ldexp.f64 x (binary64->integer y)))
+        (un_ldexp_binary64 (ldexp.f64 x (binary64->integer y)) (*.f64 x (pow.f64 2 y))))))
+
+  (when ldexpf
+    (register-ruleset! 'ldexp-f32 '(arithmetic) '((x . binary32) (y . binary32))
+      '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
+        (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
+
+  (register-ruleset! 'average-int '(arithmetic integer)
+    '((a . integer) (b . integer))
+    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers
+                  (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
+                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 63))
+                                         (bxor.fx32-0 a b))))
+      (int32-avg-b-gt-a  (/.fx32-0 (+.fx32-0 a b) 2)   ; good if b > a
+                         (+.fx32-0 a (/.fx32-0 (-.fx32-0 b a) 2)))))
+
+  #t)
+
+; 64-bit integer operators and rules
+(define (generate-int64)
+
+  ; Operator implementations
+
+  (register-operator-impl! 'cast 'binary64->integer_64 (list 'binary64) '(integer 64)
+    `((fl . ,(compose (real->fx #t 64 0) truncate))))
+
+  (register-operator-impl! 'cast 'integer_64->binary64 (list '(integer 64)) 'binary64
+    `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
+
+  (define (reinterpret-as-double x)
+    (cond
+     [(nan? x) +nan.0]
+     [else (floating-point-bytes->real (integer->integer-bytes x 8 #t))]))
+
+  (define (reinterpret-as-int64 x)
+     (integer-bytes->integer (real->floating-point-bytes x 8) #t))
+
+  (define (bfreinterpret-as-double x)
+    (let ([x* (bigfloat->integer x)])
+      (bf (floating-point-bytes->real (integer->integer-bytes x* 8 #t)))))
+
+  (define (bfreinterpret-as-int64 x)
+    (let ([x* (bigfloat->real x)])
+      (bf (integer-bytes->integer (real->floating-point-bytes x* 8) #t))))
+
+  (register-operator-impl! 'reinterpret 'reinterpret_int64_double (list '(integer 64)) 'binary64
+    `((fl . ,reinterpret-as-double) (bf . ,bfreinterpret-as-double)
+      (nonffi . ,reinterpret-as-double)))
+
+  (register-operator-impl! 'reinterpret 'reinterpret_double_int64 (list 'binary64) '(integer 64)
+    `((fl . ,reinterpret-as-int64) (bf . ,bfreinterpret-as-int64)
+      (nonffi . ,reinterpret-as-int64)))
+
+  ; Rules
+
+  ; Taylor phase messes this up
+  (register-ruleset! 'reinterpret_binary64_integer64 '(arithmetic integer)
+    '((a . binary64) '(b . (integer 64)))
+    '((insert_integer64   a     (reinterpret_int64_double (reinterpret_double_int64 a)))
+      (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
+
+  #t)
+
 
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
