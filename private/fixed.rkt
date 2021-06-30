@@ -203,8 +203,12 @@
     (define b (inexact->exact (ceiling (log (abs x*) 2))))
     ((real->fx sign? nbits scale)
       (cond
-       [(and (negative? y*) (> (abs y*) (abs scale))) 0]                        ; underflow to 0
-       [(> (* b y*) nbits) (if (and (negative? x*) (odd? y*)) -inf.0 +inf.0)]   ; overflow to inf
+       [(and (negative? y*) (> (abs y*) (abs scale))) 0]      ; underflow to 0
+       [(> (* b y*) nbits)
+        (cond
+         [(and (negative? x*) (not (integer? y*)))  +nan.0]   ; complex root
+         [(and (negative? x*) (odd? y*)) -inf.0]              ; overflow to inf
+         [else +inf.0])]
        [else (no-complex (expt x* y*))]))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Unit tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

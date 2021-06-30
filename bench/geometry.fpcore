@@ -1,0 +1,19 @@
+(FPCore (x y)
+ :name "norm R^2, (fixed 32 -8)"
+ :precision (fixed 32 -8)
+ (sqrt (+ (* x x) (* y y))))
+
+(FPCore (x y z)
+ :name "norm R^3, (fixed 32 -8)"
+ :precision (fixed 32 -8)
+ (sqrt (+ (* x x) (* y y) (* z z))))
+
+(FPCore (x y)
+ :name "norm R^2, (fixed 16 -8)"
+ :precision (fixed 16 -8)
+ (sqrt (+ (* x x) (* y y))))
+
+(FPCore (x y z)
+ :name "norm R^3, (fixed 16 -8)"
+ :precision (fixed 16 -8)
+ (sqrt (+ (* x x) (* y y) (* z z))))
