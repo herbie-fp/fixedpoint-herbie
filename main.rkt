@@ -67,6 +67,28 @@
     bf->fx fx->bf ord->fx fx->ord
     nbits nan?)
 
+  ; Constant implementations
+
+  (define (register-fx-constant! cnst fx-impl #:bf [bf-impl #f] #:ival [ival-impl #f])
+      (define base-dict
+        (list (cons 'fl fx-impl)
+              (cons 'bf bf-impl)
+              (cons 'ival ival-impl)))
+      (define info-dict (filter cdr base-dict))
+      (register-constant-impl! cnst (fx-name cnst) name info-dict))
+
+  (register-fx-constant! 'PI
+      (const ((real->fx #t nbits scale) pi)))
+
+  (register-fx-constant! 'E
+      (const ((real->fx #t nbits scale) (exp 1.0))))
+
+  (register-fx-constant! 'INFINITY
+      (const ((real->fx #t nbits scale) +inf.0)))
+
+  (register-fx-constant! 'NAN
+      (const ((real->fx #t nbits scale) +nan.0)))
+
   ; Operator implementations
 
   ; Helper function to declare operator implementations
