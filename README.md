@@ -4,6 +4,7 @@ Herbie support for fixed-point numbers
 This repository contains a plugin for [Herbie](https://herbie.uwplse.org) to support fixed-point numbers
 
 Fixed-point numbers are defined with `n` total bits and a scale factor of 2 ^ `s`.
+Use in Herbie, by specifying `:precision (fixed n s)`.
 Alternatively, use `:precision integer` for `:precision (fixed 32 0)`
   and `:precision (integer n)` for `:precision (fixed n 0)`.
 
