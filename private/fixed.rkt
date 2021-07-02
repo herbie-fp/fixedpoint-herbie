@@ -143,6 +143,7 @@
 
 (define ((fxshl sign? nbits scale) x y)
   (cond
+   [(or (nan? x) (nan? y)) +nan.0]
    [(negative? y) ((fxshr sign? nbits scale) x (- y))]
    [else
     (define r (arithmetic-shift (bitwise-bit-field x 0 nbits) y))
@@ -151,6 +152,7 @@
 
 (define ((fxshr sign? nbits scale) x y)
   (cond
+   [(or (nan? x) (nan? y)) +nan.0]
    [(negative? y) ((fxshl sign? nbits scale) x (- y))]
    [else (arithmetic-shift x (- y))]))
 

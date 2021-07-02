@@ -163,13 +163,13 @@
   (define bxor (fx-name 'bxor))
   (define band (fx-name 'band))
 
-  (register-ruleset! 'bitwise-commutativity '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-commutativity) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name))
     `((,(fx-name 'commutate-or)    (,bor x y)       (,bor y x))
       (,(fx-name 'commutate-xor)   (,bxor x y)      (,bxor y x))
       (,(fx-name 'commutate-and)   (,band x y)      (,band y x))))
 
-  (register-ruleset! 'bitwise-associativity '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-associativity) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name) (z . ,name))
     `((,(fx-name 'associate-or-r)    (,bor x (,bor y z))       (,bor (,bor x y) z))
       (,(fx-name 'associate-or-l)    (,bor (,bor x y) z)       (,bor x (,bor y z)))
@@ -178,29 +178,29 @@
       (,(fx-name 'associate-and-r)   (,band (,band x y) z)     (,band x (,band y z)))
       (,(fx-name 'associate-and-l)   (,band (,band x y) z)     (,band x (,band y z)))))
 
-  (register-ruleset! 'bitwise-identity '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-identity) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name))
     `((,(fx-name 'or-identity)    (,bor x 0)    x)
       (,(fx-name 'xor-identity)   (,bxor x 0)   x)
       (,(fx-name 'or-identity-2)  (,bxor x x)   x)))
 
-  (register-ruleset! 'bitwise-reduce '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-reduce) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name))
     `((,(fx-name 'not-reduce)     (,bnot (,bnot x))    x)
       (,(fx-name 'xor-reduce)     (,bxor x x)         0)
       (,(fx-name 'and-reduce)     (,band x 0)         0)))
 
-  (register-ruleset! 'bitwise-xor-def '(arithmetic bitwise fp-safe)
+  (register-ruleset! (fx-name 'bitwise-xor-def) '(arithmetic bitwise fp-safe)
     `((x . ,name) (y . ,name))
     `((,(fx-name 'xor-def-1)   (,bxor x y)   (,band (,bor x y) (,bor (,bnot x) (,bnot y))))
       (,(fx-name 'xor-def-2)   (,bxor x y)   (,bor (,band x (,bnot y)) (,band (,bnot x) y)))))
 
-  (register-ruleset! 'bitwise-xor-reduce '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-xor-reduce) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name))
     `((,(fx-name 'xor-reduce-1)   (,band (,bor x y) (,bor (,bnot x) (,bnot y)))   (,bxor x y))
       (,(fx-name 'xor-reduce-2)   (,bor (,band x (,bnot y)) (,band (,bnot x) y))  (,bxor x y))))
 
-  (register-ruleset! 'bitwise-distribute '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-distribute) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name) (z . ,name))
     `((,(fx-name 'distribute-or-and-l)    (,bor x (,band y z))    (,band (,bor x y) (,bor x z)))
       (,(fx-name 'distribute-or-and-r)    (,bor (,band y z) x)    (,band (,bor x y) (,bor x z)))
@@ -211,12 +211,28 @@
       (,(fx-name 'distribute-not-or)      (,bnot (,bor x y))      (,band (,bnot x) (,bnot y)))
       (,(fx-name 'distribute-not-and)     (,bnot (,band x y))     (,bor (,bnot x) (,bnot y)))))
 
-  (register-ruleset! 'bitwise-eliminate '(arithmetic bitwise simplify fp-safe)
+  (register-ruleset! (fx-name 'bitwise-eliminate) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name))
     `((,(fx-name 'eliminate-or-and-l)     (,bor x (,band x y))    x)
       (,(fx-name 'eliminate-or-and-r)     (,bor (,band x y) x)    x)
       (,(fx-name 'eliminate-and-or-l)     (,band x (,bor x y))    x)
       (,(fx-name 'eliminate-and-or-r)     (,band (,bor x y) x)    x)))
+
+  ; mul as shift-left rules                      
+  (register-ruleset! (fx-name 'mul-shl) '(arithmetic bitwise)
+    `((a . ,name))
+    (for/list ([i (in-range 1 nbits)])
+      (let ([name-lhs (string->symbol (format "~a-mul-shl-~a-l" name i))]
+            [name-rhs (string->symbol (format "~a-mul-shl-~a-r" name i))])
+        (list name-lhs `(,(fx-name '*) ,(expt 2 i) a) `(,(fx-name 'shl) a ,i))
+        (list name-rhs `(,(fx-name '*) a ,(expt 2 i)) `(,(fx-name 'shl) a ,i)))))
+
+  ; div as shift-right rules                      
+  (register-ruleset! (fx-name 'mul-shr) '(arithmetic integer)
+    `((a . ,name))
+    (for/list ([i (in-range 1 32)])
+      (let ([name (string->symbol (format "~a-mul-shr-~a" name i))])
+        (list name `(,(fx-name '/) a ,(expt 2 i)) `(,(fx-name 'shr) a ,i)))))
 
   #t)
 
@@ -299,6 +315,7 @@
       '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
 
+  ; Average
   (register-ruleset! 'average-int '(arithmetic integer)
     '((a . integer) (b . integer))
     '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers

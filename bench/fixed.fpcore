@@ -56,3 +56,13 @@
  :name "average, integer"
  :precision integer
  (/ (+ x y) 2))
+
+(FPCore (x)
+ :name "mul, shl"
+ :precision integer
+ (* x 16))
+
+(FPCore (x)
+ :name "div, shr"
+ :precision integer
+ (/ x 16))
