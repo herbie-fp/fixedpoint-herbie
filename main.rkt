@@ -320,7 +320,7 @@
     '((a . integer) (b . integer))
     '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers
                   (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
-                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 63))
+                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 31))
                                          (bxor.fx32-0 a b))))
       (int32-avg-b-gt-a  (/.fx32-0 (+.fx32-0 a b) 2)   ; good if b > a
                          (+.fx32-0 a (/.fx32-0 (-.fx32-0 b a) 2)))))
@@ -366,7 +366,7 @@
 
   ; Taylor phase messes this up
   (register-ruleset! 'reinterpret_binary64_integer64 '(arithmetic integer)
-    '((a . binary64) '(b . (integer 64)))
+    '((a . binary64) (b . (integer 64)))
     '((insert_integer64   a     (reinterpret_int64_double (reinterpret_double_int64 a)))
       (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
 

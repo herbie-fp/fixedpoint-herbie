@@ -15,12 +15,12 @@
  :herbie-target (/ x (/ y 32))
  (/ (* x 32) y))
 
-(FPCore (x y)
- :name "ldexp"
- :precision binary64
- :pre (< -100 y 100)
- :herbie-conversions ((binary64 integer))
- (* x (pow 2 y)))
+; (FPCore (x y)
+;  :name "ldexp"
+;  :precision binary64
+;  :pre (< -100 y 100)
+;  :herbie-conversions ((binary64 integer))
+;  (* x (pow 2 y)))
 
 (FPCore (x)
  :name "not, integer"
