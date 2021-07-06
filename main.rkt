@@ -54,6 +54,8 @@
 
 ; General fixed-point operations
 (define (generate-fixed-point* nbits scale name)
+  (define fx->re (fx->real #t nbits scale))
+  (define re->fx (real->fx #t nbits scale))
   (define bf->fx (bigfloat->fx #t nbits scale))
   (define fx->bf (fx->bigfloat #t nbits scale))
   (define ord->fx (ordinal->fx #t nbits scale))
@@ -151,10 +153,15 @@
     (let ([x (bf->fx x)] [y (bf->fx y)])
       (fx->bf (fxand* x y))))
 
-  (register-fx-operator! 'bnot 'bnot 1 fxnot* #:bf bfnot #:nonffi fxnot*)
-  (register-fx-operator! 'bor 'bor 2 fxor* #:bf bfor #:nonffi fxor*)
-  (register-fx-operator! 'bxor 'bxor 2 fxxor* #:bf bfxor #:nonffi fxxor*)
-  (register-fx-operator! 'band 'band 2 fxand* #:bf bfand #:nonffi fxand*)
+  (define (real-fx-op f)
+    (λ (a b)
+      (let ([a (re->fx a)] [b (re->fx b)])
+        (fx->re (f a b)))))
+
+  (register-fx-operator! 'bnot 'bnot 1 fxnot* #:bf bfnot #:nonffi (real-fx-op fxnot*))
+  (register-fx-operator! 'bor 'bor 2 fxor* #:bf bfor #:nonffi (real-fx-op fxor*))
+  (register-fx-operator! 'bxor 'bxor 2 fxxor* #:bf bfxor #:nonffi (real-fx-op fxxor*))
+  (register-fx-operator! 'band 'band 2 fxand* #:bf bfand #:nonffi (real-fx-op fxand*))
 
   ; Rules
 

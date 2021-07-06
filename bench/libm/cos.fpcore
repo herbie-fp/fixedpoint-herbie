@@ -1,0 +1,63 @@
+; The following FPCores are from JuliaMath's openlibm implementations
+
+; file: k_cosf.c
+; descr: computes cosf(x) for x in [-pi/4 pi/4]
+; 
+; cosf(x) = 1 + C0*x^2 + C1*x^4 + C2*x^6 + C3*x^8
+;
+
+(FPCore (x)
+ :name "openlibm cosf (fixed 64 -63)"
+ :precision (fixed 64 -63)
+ :pre (<= -0.785398163397448309616 x 0.785398163397448309616)   ; [-pi/4, pi/4]
+ (let* ([C0 -0.499999997251031003120]                           ; polynomial coeffs
+        [C1 0.0416666233237390631894]
+        [C2 -0.00138867637746099294692]
+        [C3 0.0000243904487962774090654]
+        
+        [z (* x x)]
+        [w (* z z)]
+        [r (+ C2 (* z C3))])
+  (+ 1 (* z C0) (* w C1) (* w z r))))
+
+(FPCore (x)
+ :name "openlibm cosf (fixed 64 -48)"
+ :precision (fixed 64 -48)
+ :pre (<= -0.785398163397448309616 x 0.785398163397448309616)   ; [-pi/4, pi/4]
+ (let* ([C0 -0.499999997251031003120]                           ; polynomial coeffs
+        [C1 0.0416666233237390631894]
+        [C2 -0.00138867637746099294692]
+        [C3 0.0000243904487962774090654]
+        
+        [z (* x x)]
+        [w (* z z)]
+        [r (+ C2 (* z C3))])
+  (+ 1 (* z C0) (* w C1) (* w z r))))
+
+(FPCore (x)
+ :name "openlibm cosf (fixed 32 -31)"
+ :precision (fixed 32 -31)
+ :pre (<= -0.785398163397448309616 x 0.785398163397448309616)   ; [-pi/4, pi/4]
+ (let* ([C0 -0.499999997251031003120]                           ; polynomial coeffs
+        [C1 0.0416666233237390631894]
+        [C2 -0.00138867637746099294692]
+        [C3 0.0000243904487962774090654]
+        
+        [z (* x x)]
+        [w (* z z)]
+        [r (+ C2 (* z C3))])
+  (+ 1 (* z C0) (* w C1) (* w z r))))
+
+(FPCore (x)
+ :name "openlibm cosf (fixed 32 -24)"
+ :precision (fixed 32 -24)
+ :pre (<= -0.785398163397448309616 x 0.785398163397448309616)   ; [-pi/4, pi/4]
+ (let* ([C0 -0.499999997251031003120]                           ; polynomial coeffs
+        [C1 0.0416666233237390631894]
+        [C2 -0.00138867637746099294692]
+        [C3 0.0000243904487962774090654]
+        
+        [z (* x x)]
+        [w (* z z)]
+        [r (+ C2 (* z C3))])
+  (+ 1 (* z C0) (* w C1) (* w z r))))
