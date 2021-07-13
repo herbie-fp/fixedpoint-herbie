@@ -39,6 +39,11 @@
 
 (module+ test (require rackunit))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Parameters ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; arithmetic overflow behavior { 'wrap 'saturate 'nan }
+(define *overflow-mode* (make-parameter 'nan))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Utility ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (limits sign? nbits scale)
@@ -56,10 +61,17 @@
 (define ((normalize sign? nbits scale) x)
   (cond
    [(nan? x) x]
-   [else
+   [(equal? (*overflow-mode*) 'wrap)
     (define x* (inexact->exact (truncate x)))
     (define shift (expt 2 (- nbits 1)))
-    (- (modulo (+ x* shift) (expt 2 nbits)) shift)]))
+    (- (modulo (+ x* shift) (expt 2 nbits)) shift)]
+   [(equal? (*overflow-mode*) 'saturate)
+    (define-values (lo hi) (limits sign? nbits scale))
+    (max (min (inexact->exact (truncate x)) hi) lo)]
+   [else   ;  (equal? (*overflow-mode*) 'nan)
+    (define-values (lo hi) (limits sign? nbits scale))
+    (define x* (inexact->exact (truncate x)))
+    (if (or (< x* lo) (> x* hi)) +nan.0 x*)]))
 
 (define (fx? x)
   (and (number? x) (or (exact-integer? x) (nan? x))))

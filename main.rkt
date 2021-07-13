@@ -112,16 +112,16 @@
   (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt #t nbits scale))
   (register-fx-operator! 'fabs 'fabs 1 abs)
 
-  (register-fx-operator! 'exp 'exp 1 (fxexp #t nbits scale))
-  (register-fx-operator! 'log 'log 1 (fxlog #t nbits scale))
-  (register-fx-operator! 'pow 'pow 2 (fxpow #t nbits scale))
+  ;;; (register-fx-operator! 'exp 'exp 1 (fxexp #t nbits scale))
+  ;;; (register-fx-operator! 'log 'log 1 (fxlog #t nbits scale))
+  ;;; (register-fx-operator! 'pow 'pow 2 (fxpow #t nbits scale))
 
-  (register-fx-operator! 'sin 'sin 1 (fxsin #t nbits scale))
-  (register-fx-operator! 'cos 'cos 1 (fxcos #t nbits scale))
-  (register-fx-operator! 'tan 'tan 1 (fxtan #t nbits scale))
-  (register-fx-operator! 'asin 'asin 1 (fxasin #t nbits scale))
-  (register-fx-operator! 'acos 'acos 1 (fxacos #t nbits scale))
-  (register-fx-operator! 'atan 'atan 1 (fxatan #t nbits scale))
+  ;;; (register-fx-operator! 'sin 'sin 1 (fxsin #t nbits scale))
+  ;;; (register-fx-operator! 'cos 'cos 1 (fxcos #t nbits scale))
+  ;;; (register-fx-operator! 'tan 'tan 1 (fxtan #t nbits scale))
+  ;;; (register-fx-operator! 'asin 'asin 1 (fxasin #t nbits scale))
+  ;;; (register-fx-operator! 'acos 'acos 1 (fxacos #t nbits scale))
+  ;;; (register-fx-operator! 'atan 'atan 1 (fxatan #t nbits scale))
 
   (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
   (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
@@ -241,6 +241,12 @@
       (let ([name (string->symbol (format "~a-mul-shr-~a" name i))])
         (list name `(,(fx-name '/) a ,(expt 2 i)) `(,(fx-name 'shr) a ,i)))))
 
+  ; average
+  ;;; (register-ruleset! (fx-name 'average-a-gt-b) '(arithmetic integer)
+  ;;;   `((a . ,name) (b . ,name))
+  ;;;   `((,(fx-name 'average-a-gt-b) (,(fx-name '/) (,(fx-name '+) a b) 2)
+  ;;;                                 (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))))
+
   #t)
 
 ;; Integer 
@@ -323,15 +329,12 @@
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
 
   ; Average
-  (register-ruleset! 'average-int '(arithmetic integer)
+  (register-ruleset! 'average-int-special '(arithmetic integer numerics)
     '((a . integer) (b . integer))
     '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers
                   (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
                             (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 31))
-                                         (bxor.fx32-0 a b))))
-      (int32-avg-b-gt-a  (/.fx32-0 (+.fx32-0 a b) 2)   ; good if b > a
-                         (+.fx32-0 a (/.fx32-0 (-.fx32-0 b a) 2)))))
-
+                                         (bxor.fx32-0 a b))))))                       
   #t)
 
 ; 64-bit integer operators and rules
