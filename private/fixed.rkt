@@ -127,19 +127,28 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bitwise ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define ((fxnot sign? nbits scale) x)
-  (let ([x* (bitwise-not x)])
-    (if (and (not sign?) (negative? x*))
-        (+ x* (expt 2 nbits))
-        x*)))
+  (cond
+   [(nan? x) +nan.0]
+   [else
+    (let ([x* (bitwise-not x)])
+      (if (and (not sign?) (negative? x*))
+          (+ x* (expt 2 nbits))
+          x*))]))
 
 (define ((fxand sign? nbits scale) x y)
-  (bitwise-and x y))
+  (cond
+   [(or (nan? x) (nan? y)) +nan.0]
+   [else (bitwise-and x y)]))
 
 (define ((fxor sign? nbits scale) x y)
-  (bitwise-ior x y))
+  (cond
+   [(or (nan? x) (nan? y)) +nan.0]
+   [else (bitwise-ior x y)]))
 
 (define ((fxxor sign? nbits scale) x y)
-  (bitwise-xor x y))
+  (cond
+   [(or (nan? x) (nan? y)) +nan.0]
+   [else (bitwise-xor x y)]))
 
 (define ((fxshl sign? nbits scale) x y)
   (cond
