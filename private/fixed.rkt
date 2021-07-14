@@ -48,8 +48,11 @@
 
 (define (limits sign? nbits scale)
   (let ([2scale (expt 2 scale)])
-    (values (if sign? (- (* 2scale (expt 2 (- nbits 1)))) 0)
-            (* 2scale (- (expt 2 (- nbits (if sign? 1 0))) 1)))))
+    (if sign?
+        (values (- (* 2scale (expt 2 (- nbits 1))))
+                (* 2scale (- (expt 2 (- nbits 1)) 1)))
+        (values 0
+                (* 2scale (- (expt 2 nbits) 1))))))
 
 ;;; (define ((check-bounds! sign? nbits scale) x)
 ;;;   (define-values (lo hi) (limits sign? nbits scale))
@@ -70,8 +73,10 @@
     (max (min (inexact->exact (truncate x)) hi) lo)]
    [else   ;  (equal? (*overflow-mode*) 'nan)
     (define-values (lo hi) (limits sign? nbits scale))
-    (define x* (inexact->exact (truncate x)))
-    (if (or (< x* lo) (> x* hi)) +nan.0 x*)]))
+    (let ([lo (/ lo (expt 2 scale))]
+          [hi (/ hi (expt 2 scale))]
+          [x (inexact->exact (truncate x))])
+      (if (<= lo x hi) x +nan.0))]))
 
 (define (fx? x)
   (and (number? x) (or (exact-integer? x) (nan? x))))
@@ -255,10 +260,18 @@
   (check-equal? ((ordinal->fx #t 32 2) 16) -2147483632)
   (check-equal? ((ordinal->fx #t 32 4) 16) -2147483632)
 
+  (check-equal? ((ordinal->fx #f 16 0) 0) 0)
+  (check-equal? ((ordinal->fx #f 16 4) 0) 0)
+  (check-equal? ((ordinal->fx #f 32 2) 100) 100)
+
   ; fx->ordinal
   (check-equal? ((fx->ordinal #t 16 0) 0) 32768)
   (check-equal? ((fx->ordinal #t 16 4) 0) 32768)
   (check-equal? ((fx->ordinal #t 32 2) 100) 2147483748)
+
+  (check-equal? ((fx->ordinal #f 16 0) 0) 0)
+  (check-equal? ((fx->ordinal #f 16 4) 0) 0)
+  (check-equal? ((fx->ordinal #f 32 2) 100) 100)
 
   ; bigfloat->fx
   (check-equal? ((bigfloat->fx #t 16 0) (bf 16)) 16)
@@ -278,6 +291,9 @@
   (check-equal? ((fx2+ #t 16 2) 16 32) 48)
   (check-equal? ((fx2+ #t 16 4) -16 32) 16)
 
+  (check-equal? ((fx2+ #f 16 0) 16 32) 48)
+  (check-equal? ((fx2+ #f 16 2) 16 32) 48)
+
   ; fx2-
   (check-equal? ((fx2- #t 16 0) 16 32) -16)
   (check-equal? ((fx2- #t 16 0) -16 32) -48)
@@ -290,11 +306,17 @@
   (check-equal? ((fx2* #t 16 2) 16 32) 2048)
   (check-equal? ((fx2* #t 16 4) -16 32) -8192)
 
+  (check-equal? ((fx2* #f 16 0) 16 32) 512)
+  (check-equal? ((fx2* #f 16 2) 16 32) 2048)
+
   ; fx2/
   (check-equal? ((fx2/ #t 16 0) 32 4) 8)
   (check-equal? ((fx2/ #t 16 0) -32 8) -4)
   (check-equal? ((fx2/ #t 16 2) 32 4) 2)
   (check-equal? ((fx2/ #t 16 4) -32 8) 0)
+
+  (check-equal? ((fx2/ #f 16 0) 32 4) 8)
+  (check-equal? ((fx2/ #f 16 2) 32 4) 2)
 
 )
 

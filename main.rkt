@@ -53,16 +53,16 @@
   
 
 ; General fixed-point operations
-(define (generate-fixed-point* nbits scale name)
-  (define fx->re (fx->real #t nbits scale))
-  (define re->fx (real->fx #t nbits scale))
-  (define bf->fx (bigfloat->fx #t nbits scale))
-  (define fx->bf (fx->bigfloat #t nbits scale))
-  (define ord->fx (ordinal->fx #t nbits scale))
-  (define fx->ord (fx->ordinal #t nbits scale))
+(define (generate-fixed-point* sign? nbits scale name)
+  (define fx->re (fx->real sign? nbits scale))
+  (define re->fx (real->fx sign? nbits scale))
+  (define bf->fx (bigfloat->fx sign? nbits scale))
+  (define fx->bf (fx->bigfloat sign? nbits scale))
+  (define ord->fx (ordinal->fx sign? nbits scale))
+  (define fx->ord (fx->ordinal sign? nbits scale))
 
   (define (fx-name name)
-    (sym-append name '.fx nbits '- scale))
+    (sym-append name (if sign? '.fx '.ufx) nbits '- scale))
 
   ; Representation
   (register-representation! name 'real fx?
@@ -80,16 +80,16 @@
       (register-constant-impl! cnst (fx-name cnst) name info-dict))
 
   (register-fx-constant! 'PI
-      (const ((real->fx #t nbits scale) pi)))
+      (const ((real->fx sign? nbits scale) pi)))
 
   (register-fx-constant! 'E
-      (const ((real->fx #t nbits scale) (exp 1.0))))
+      (const ((real->fx sign? nbits scale) (exp 1.0))))
 
   (register-fx-constant! 'INFINITY
-      (const ((real->fx #t nbits scale) +inf.0)))
+      (const ((real->fx sign? nbits scale) +inf.0)))
 
   (register-fx-constant! 'NAN
-      (const ((real->fx #t nbits scale) +nan.0)))
+      (const ((real->fx sign? nbits scale) +nan.0)))
 
   ; Operator implementations
 
@@ -103,25 +103,25 @@
     (define info-dict (filter cdr base-dict))
     (register-operator-impl! op (fx-name op-name) (make-list argc name) name info-dict))
 
-  (register-fx-operator! 'neg 'neg 1 (curry (fx2- #t nbits scale) 0))
-  (register-fx-operator! '+ '+ 2 (fx2+ #t nbits scale))
-  (register-fx-operator! '- '- 2 (fx2- #t nbits scale))
-  (register-fx-operator! '* '* 2 (fx2* #t nbits scale))
-  (register-fx-operator! '/ '/ 2 (fx2/ #t nbits scale))
-  (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt #t nbits scale))
-  (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt #t nbits scale))
+  (register-fx-operator! 'neg 'neg 1 (curry (fx2- sign? nbits scale) 0))
+  (register-fx-operator! '+ '+ 2 (fx2+ sign? nbits scale))
+  (register-fx-operator! '- '- 2 (fx2- sign? nbits scale))
+  (register-fx-operator! '* '* 2 (fx2* sign? nbits scale))
+  (register-fx-operator! '/ '/ 2 (fx2/ sign? nbits scale))
+  (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt sign? nbits scale))
+  (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt sign? nbits scale))
   (register-fx-operator! 'fabs 'fabs 1 abs)
 
-  (register-fx-operator! 'exp 'exp 1 (fxexp #t nbits scale))
-  (register-fx-operator! 'log 'log 1 (fxlog #t nbits scale))
-  (register-fx-operator! 'pow 'pow 2 (fxpow #t nbits scale))
+  (register-fx-operator! 'exp 'exp 1 (fxexp sign? nbits scale))
+  (register-fx-operator! 'log 'log 1 (fxlog sign? nbits scale))
+  (register-fx-operator! 'pow 'pow 2 (fxpow sign? nbits scale))
 
-  (register-fx-operator! 'sin 'sin 1 (fxsin #t nbits scale))
-  (register-fx-operator! 'cos 'cos 1 (fxcos #t nbits scale))
-  (register-fx-operator! 'tan 'tan 1 (fxtan #t nbits scale))
-  (register-fx-operator! 'asin 'asin 1 (fxasin #t nbits scale))
-  (register-fx-operator! 'acos 'acos 1 (fxacos #t nbits scale))
-  (register-fx-operator! 'atan 'atan 1 (fxatan #t nbits scale))
+  (register-fx-operator! 'sin 'sin 1 (fxsin sign? nbits scale))
+  (register-fx-operator! 'cos 'cos 1 (fxcos sign? nbits scale))
+  (register-fx-operator! 'tan 'tan 1 (fxtan sign? nbits scale))
+  (register-fx-operator! 'asin 'asin 1 (fxasin sign? nbits scale))
+  (register-fx-operator! 'acos 'acos 1 (fxacos sign? nbits scale))
+  (register-fx-operator! 'atan 'atan 1 (fxatan sign? nbits scale))
 
   (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
   (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
@@ -132,10 +132,10 @@
 
   ; Bitwise operator implemenetations
 
-  (define fxnot* (fxnot #t nbits scale))
-  (define fxor* (fxor #t nbits scale))
-  (define fxxor* (fxxor #t nbits scale))
-  (define fxand* (fxand #t nbits scale))
+  (define fxnot* (fxnot sign? nbits scale))
+  (define fxor* (fxor sign? nbits scale))
+  (define fxxor* (fxxor sign? nbits scale))
+  (define fxand* (fxand sign? nbits scale))
 
   (define (bfnot x)
     (let ([x (bf->fx x)])
@@ -242,10 +242,10 @@
         (list name `(,(fx-name '/) a ,(expt 2 i)) `(,(fx-name 'shr) a ,i)))))
 
   ; average
-  (register-ruleset! (fx-name 'average-a-gt-b) '(arithmetic integer)
+  (register-ruleset! (fx-name 'average) '(arithmetic integer)
     `((a . ,name) (b . ,name))
-    `((,(fx-name 'average-a-gt-b) (,(fx-name '/) (,(fx-name '+) a b) 2)
-                                  (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))))
+    `((,(fx-name 'average) (,(fx-name '/) (,(fx-name '+) a b) 2)
+                           (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))))
 
   #t)
 
@@ -386,18 +386,23 @@
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
   (match name
-    [(list 'fixed nbits scale) (generate-fixed-point* nbits scale name)]
+    [(list 'fixed nbits scale) (generate-fixed-point* #t nbits scale name)]
+    [(list 'ufixed nbits scale) (generate-fixed-point* #f nbits scale name)]
     [_ #f]))
 
 ;; Generator for integer representations
 (define (generate-integer name)
   (match name
    ['integer
-    (generate-fixed-point* 32 0 name)
+    (generate-fixed-point* #t 32 0 name)
     (generate-int32)]
    [(list 'integer n)
-    (generate-fixed-point* n 0 name)
+    (generate-fixed-point* #t n 0 name)
     (when (= n 64) (generate-int64))]
+   ['uinteger
+    (generate-fixed-point* #f 32 0 name)]
+   [(list 'uinteger n)
+    (generate-fixed-point* #f n 0 name)]
    [_ #f]))
 
 (register-generator! generate-integer)

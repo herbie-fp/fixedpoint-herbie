@@ -15,6 +15,24 @@
  :herbie-target (/ x (/ y 32))
  (/ (* x 32) y))
 
+(FPCore (x y)
+ :name "Associativity, ufx16,0"
+ :precision (ufixed 16 0)
+ (/ (* x 8) y))
+
+(FPCore (x y)
+ :name "Associativity, ufx16,2"
+ :precision (ufixed 16 2)
+ :herbie-target (/ x (/ y 16))
+ (/ (* x 16) y))
+
+(FPCore (x y)
+ :name "Associativity, ufx16,4"
+ :precision (ufixed 16 4)
+ :herbie-target (/ x (/ y 32))
+ (/ (* x 32) y))
+
+
 ; (FPCore (x y)
 ;  :name "ldexp"
 ;  :precision binary64
