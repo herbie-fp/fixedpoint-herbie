@@ -7,6 +7,9 @@
                       ((integer 16) (fixed 16 2))
                       ((integer 16) (fixed 16 3))
                       ((integer 16) (fixed 16 4)))
+ :herbie-target
+ (+ (/ x 2) (/ y 2))
+ 
  (/ (+ x y) 2))
 
 (FPCore (x y)
@@ -24,6 +27,9 @@
                       ((uinteger 16) (ufixed 16 2))
                       ((uinteger 16) (ufixed 16 3))
                       ((uinteger 16) (ufixed 16 4)))
+ :herbie-target
+ (+ (/ x 2) (/ y 2))
+
  (/ (+ x y) 2))
 
 (FPCore (x y)
@@ -31,3 +37,37 @@
  :precision (uinteger 16)
  :herbie-conversions (((uinteger 16) (uinteger 17)))
  (/ (+ x y) 2))
+
+;; determinant
+
+(FPCore (a b c d)
+ :name "determinant / 2, 2x2"
+ :precision (integer 16)
+ :pre (and (<= -250 a 250)
+           (<= -250 b 250)
+           (<= -250 c 250)
+           (<= -250 d 250))
+ :herbie-conversions (((integer 16) (fixed 16 1))
+                      ((integer 16) (fixed 16 2))
+                      ((integer 16) (fixed 16 3))
+                      ((integer 16) (fixed 16 4)))
+ :herbie-target
+ (- (* (/ a 2) d) (* (/ b 2) c))
+
+ (/ (- (* a d) (* b c)) 2))
+
+(FPCore (a b c d)
+ :name "determinant / 16, 2x2"
+ :precision (integer 16)
+ :pre (and (<= -700 a 700)
+           (<= -700 b 700)
+           (<= -700 c 700)
+           (<= -700 d 700))          
+ :herbie-conversions (((integer 16) (fixed 16 1))
+                      ((integer 16) (fixed 16 2))
+                      ((integer 16) (fixed 16 3))
+                      ((integer 16) (fixed 16 4)))
+ :herbie-target
+ (- (* (/ a 16) d) (* (/ b 16) c))
+
+ (/ (- (* a d) (* b c)) 16))
