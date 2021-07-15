@@ -272,6 +272,42 @@
 
 (require (submod "." hairy))
 
+;; generic integer operators and rules
+(define (generate-integer* nbits scale name)
+
+  (define (fx-name name)
+    (sym-append name '.fx nbits '- scale))
+
+  (define (bfshl x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshl #t nbits 0) x* y*))))
+
+  (define (bfshr x y)
+    (let ([x* (bigfloat->integer x)]
+          [y* (bigfloat->integer y)])
+      (bf ((fxshr #t nbits 0) x* y*))))
+
+  ;; operators
+
+  (register-operator-impl! 'shl (fx-name 'shl) (list name name) name
+    `((fl . ,(fxshl #t nbits 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t nbits 0))))
+
+  (register-operator-impl! 'shr (fx-name 'shr) (list name name) name
+    `((fl . ,(fxshr #t nbits 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t nbits 0))))
+
+  ;; rules
+
+  ; Hacker's Delight: average of two integers
+  (register-ruleset! 'average-int-special '(numerics)
+    `((a . ,name) (b . ,name))
+    `((,(fx-name 'integer-avg-bitwise)
+       (,(fx-name '/) (,(fx-name '+) a b) 2)
+       (,(fx-name '+) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1))
+                      (,(fx-name 'band) (,(fx-name 'neg) (,(fx-name 'shr) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1)) ,(- nbits 1)))
+                                        (,(fx-name 'bxor) a b))))))
+  #t)
+
 ;; 32-bit integer operators and rules
 (define (generate-int32)
 
@@ -289,22 +325,6 @@
   (when ldexpf
     (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
       `((fl . ,ldexpf))))
-
-  (define (bfshl x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshl #t 32 0) x* y*))))
-
-  (define (bfshr x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshr #t 32 0) x* y*))))
-
-  (register-operator-impl! 'shl 'shl.fx32-0 (list 'integer 'integer) 'integer
-    `((fl . ,(fxshl #t 32 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t 32 0))))
-
-  (register-operator-impl! 'shr 'shr.fx32-0 (list 'integer 'integer) 'integer
-    `((fl . ,(fxshr #t 32 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t 32 0))))
 
   (register-operator-impl! 'cast 'binary64->integer (list 'binary64) 'integer
     `((fl . ,(compose (real->fx #t 32 0) truncate))))
@@ -330,13 +350,6 @@
       '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
 
-  ; Average
-  (register-ruleset! 'average-int-special '(numerics)
-    '((a . integer) (b . integer))
-    '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers
-                  (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))
-                            (band.fx32-0 (neg.fx32-0 (shr.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1)) 31))
-                                         (bxor.fx32-0 a b))))))                       
   #t)
 
 ; 64-bit integer operators and rules
@@ -397,9 +410,11 @@
   (match name
    ['integer
     (generate-fixed-point* #t 32 0 name)
+    (generate-integer* 32 0 name)
     (generate-int32)]
    [(list 'integer n)
     (generate-fixed-point* #t n 0 name)
+    (generate-integer* n 0 name)
     (when (= n 64) (generate-int64))]
    ['uinteger
     (generate-fixed-point* #f 32 0 name)]
