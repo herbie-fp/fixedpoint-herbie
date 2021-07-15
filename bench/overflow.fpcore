@@ -3,36 +3,17 @@
 (FPCore (x y)
  :name "average, integer 16, upscale"
  :precision (integer 16)
- :pre (and (>= x 0) (>= y 0))
  :herbie-conversions (((integer 16) (fixed 16 1))
                       ((integer 16) (fixed 16 2))
                       ((integer 16) (fixed 16 3))
                       ((integer 16) (fixed 16 4)))
  (/ (+ x y) 2))
-
-(FPCore (x y)
- :name "addition w/ overflow, integer 16, upscale"
- :precision (integer 16)
- :pre (and (>= x 14000) (>= y 14000))
- :herbie-conversions (((integer 16) (fixed 16 1))
-                      ((integer 16) (fixed 16 2))
-                      ((integer 16) (fixed 16 3))
-                      ((integer 16) (fixed 16 4)))
- (+ x y))
 
 (FPCore (x y)
  :name "average, integer 16, widen"
  :precision (integer 16)
- :pre (and (>= x 0) (>= y 0))
  :herbie-conversions (((integer 16) (integer 17)))
  (/ (+ x y) 2))
-
-(FPCore (x y)
- :name "addition w/ overflow, integer 16, widen"
- :precision (integer 16)
- :pre (and (>= x 14000) (>= y 14000))
- :herbie-conversions (((integer 16) (integer 17)))
- (+ x y))
 
 ;; unsigned
 
@@ -46,25 +27,7 @@
  (/ (+ x y) 2))
 
 (FPCore (x y)
- :name "addition w/ overflow, uinteger 16, upscale"
- :precision (uinteger 16)
- :pre (and (>= x 28000) (>= y 28000))
- :herbie-conversions (((uinteger 16) (ufixed 16 1))
-                      ((uinteger 16) (ufixed 16 2))
-                      ((uinteger 16) (ufixed 16 3))
-                      ((uinteger 16) (ufixed 16 4)))
- (+ x y))
-
-(FPCore (x y)
  :name "average, uinteger 16, widen"
  :precision (uinteger 16)
- :pre (and (>= x 0) (>= y 0))
  :herbie-conversions (((uinteger 16) (uinteger 17)))
  (/ (+ x y) 2))
-
-(FPCore (x y)
- :name "addition w/ overflow, uinteger 16, widen"
- :precision (uinteger 16)
- :pre (and (>= x 14000) (>= y 14000))
- :herbie-conversions (((uinteger 16) (uinteger 17)))
- (+ x y))

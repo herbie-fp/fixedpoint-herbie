@@ -137,9 +137,9 @@
   ((normalize sign? nbits scale) (* x y (expt 2 scale))))
 
 (define ((fx2/ sign? nbits scale) x y)
-  (if (zero? y)
-      +nan.0
-      ((normalize sign? nbits scale) (/ x y (expt 2 scale)))))
+  (cond
+   [(zero? y) +nan.0]
+   [else ((normalize sign? nbits scale) (/ x y (expt 2 scale)))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bitwise ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -299,6 +299,8 @@
   (check-equal? ((fx2- #t 16 0) -16 32) -48)
   (check-equal? ((fx2- #t 16 2) 16 32) -16)
   (check-equal? ((fx2- #t 16 4) -16 32) -48)
+
+  (check-equal? ((fx2- #f 16 0) 32 16) 16)
 
   ; fx2*
   (check-equal? ((fx2* #t 16 0) 16 32) 512)

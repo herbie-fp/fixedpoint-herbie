@@ -244,8 +244,10 @@
   ; average
   (register-ruleset! (fx-name 'average) '(arithmetic integer)
     `((a . ,name) (b . ,name))
-    `((,(fx-name 'average) (,(fx-name '/) (,(fx-name '+) a b) 2)
-                           (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))))
+    `((,(fx-name 'average-l) (,(fx-name '/) (,(fx-name '+) a b) 2)
+                             (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))
+      (,(fx-name 'average-r) (,(fx-name '/) (,(fx-name '+) a b) 2)
+                             (,(fx-name '+) b (,(fx-name '/) (,(fx-name '-) a b) 2)))))
 
   #t)
 
@@ -329,7 +331,7 @@
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
 
   ; Average
-  (register-ruleset! 'average-int-special '(arithmetic integer numerics)
+  (register-ruleset! 'average-int-special '(numerics)
     '((a . integer) (b . integer))
     '((int32-avg  (/.fx32-0 (+.fx32-0 a b) 2)   ; Hacker's Delight: average of two integers
                   (+.fx32-0 (+.fx32-0 (band.fx32-0 a b) (shr.fx32-0 (bxor.fx32-0 a b) 1))

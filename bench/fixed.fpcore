@@ -75,6 +75,12 @@
  :precision integer
  (/ (+ x y) 2))
 
+(FPCore (x y)
+ :name "average y > x, fx16,1"
+ :precision (fixed 16 1)
+ :pre (and (>= x 0) (> y x))
+ (/ (+ x y) 2))
+
 (FPCore (x)
  :name "mul, shl"
  :precision integer
