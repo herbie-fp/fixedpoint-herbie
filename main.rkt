@@ -108,20 +108,20 @@
   (register-fx-operator! '- '- 2 (fx2- sign? nbits scale))
   (register-fx-operator! '* '* 2 (fx2* sign? nbits scale))
   (register-fx-operator! '/ '/ 2 (fx2/ sign? nbits scale))
-  (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt sign? nbits scale))
-  (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt sign? nbits scale))
+  ;;; (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt sign? nbits scale))
+  ;;; (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt sign? nbits scale))
   (register-fx-operator! 'fabs 'fabs 1 abs)
 
-  (register-fx-operator! 'exp 'exp 1 (fxexp sign? nbits scale))
-  (register-fx-operator! 'log 'log 1 (fxlog sign? nbits scale))
-  (register-fx-operator! 'pow 'pow 2 (fxpow sign? nbits scale))
+  ;;; (register-fx-operator! 'exp 'exp 1 (fxexp sign? nbits scale))
+  ;;; (register-fx-operator! 'log 'log 1 (fxlog sign? nbits scale))
+  ;;; (register-fx-operator! 'pow 'pow 2 (fxpow sign? nbits scale))
 
-  (register-fx-operator! 'sin 'sin 1 (fxsin sign? nbits scale))
-  (register-fx-operator! 'cos 'cos 1 (fxcos sign? nbits scale))
-  (register-fx-operator! 'tan 'tan 1 (fxtan sign? nbits scale))
-  (register-fx-operator! 'asin 'asin 1 (fxasin sign? nbits scale))
-  (register-fx-operator! 'acos 'acos 1 (fxacos sign? nbits scale))
-  (register-fx-operator! 'atan 'atan 1 (fxatan sign? nbits scale))
+  ;;; (register-fx-operator! 'sin 'sin 1 (fxsin sign? nbits scale))
+  ;;; (register-fx-operator! 'cos 'cos 1 (fxcos sign? nbits scale))
+  ;;; (register-fx-operator! 'tan 'tan 1 (fxtan sign? nbits scale))
+  ;;; (register-fx-operator! 'asin 'asin 1 (fxasin sign? nbits scale))
+  ;;; (register-fx-operator! 'acos 'acos 1 (fxacos sign? nbits scale))
+  ;;; (register-fx-operator! 'atan 'atan 1 (fxatan sign? nbits scale))
 
   (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
   (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
