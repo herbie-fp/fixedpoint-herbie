@@ -123,7 +123,15 @@
   (bf ((fx->real sign? nbits scale) x)))
 
 (define ((bigfloat->fx sign? nbits scale) x)
-  ((real->fx sign? nbits scale) (bigfloat->real x)))
+  (define fx (real->fx sign? nbits scale))
+  (cond
+   [(bfinfinite? x) (if (bfnegative? x) (fx -inf.0) (fx +inf.0))]
+   [(bfnan? x) (fx +nan.0)]
+   [(negative? scale)
+    (define x* (bf/ x (bf (expt 2 scale))))
+    (fx (* (bigfloat->integer (bftruncate x*)) (expt 2 scale)))]
+   [else
+    (fx (bigfloat->integer (bftruncate x)))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Arithmetic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

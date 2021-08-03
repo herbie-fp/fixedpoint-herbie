@@ -248,8 +248,7 @@
                              (,(fx-name '+) a (,(fx-name '/) (,(fx-name '-) b a) 2)))
       (,(fx-name 'average-r) (,(fx-name '/) (,(fx-name '+) a b) 2)
                              (,(fx-name '+) b (,(fx-name '/) (,(fx-name '-) a b) 2)))))
-
-  #t)
+)
 
 ;; Integer 
 
@@ -306,7 +305,7 @@
        (,(fx-name '+) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1))
                       (,(fx-name 'band) (,(fx-name 'neg) (,(fx-name 'shr) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1)) ,(- nbits 1)))
                                         (,(fx-name 'bxor) a b))))))
-  #t)
+)
 
 ;; 32-bit integer operators and rules
 (define (generate-int32)
@@ -349,8 +348,7 @@
     (register-ruleset! 'ldexp-f32 '(arithmetic) '((x . binary32) (y . binary32))
       '((ldexp_binary32 (*.f32 x (pow.f32 2 y)) (ldexp.f32 x (binary32->integer y)))
         (un_ldexp_binary32 (ldexp.f32 x (binary32->integer y)) (*.f32 x (pow.f32 2 y))))))
-
-  #t)
+)
 
 ; 64-bit integer operators and rules
 (define (generate-int64)
@@ -394,15 +392,18 @@
     '((a . binary64) (b . (integer 64)))
     '((insert_integer64   a     (reinterpret_int64_double (reinterpret_double_int64 a)))
       (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
-
-  #t)
+)
 
 
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
   (match name
-    [(list 'fixed nbits scale) (generate-fixed-point* #t nbits scale name)]
-    [(list 'ufixed nbits scale) (generate-fixed-point* #f nbits scale name)]
+    [(list 'fixed nbits scale)
+      (generate-fixed-point* #t nbits scale name)
+      #t]
+    [(list 'ufixed nbits scale)
+      (generate-fixed-point* #f nbits scale name)
+      #t]
     [_ #f]))
 
 ;; Generator for integer representations
@@ -411,15 +412,19 @@
    ['integer
     (generate-fixed-point* #t 32 0 name)
     (generate-integer* 32 0 name)
-    (generate-int32)]
+    (generate-int32)
+    #t]
    [(list 'integer n)
     (generate-fixed-point* #t n 0 name)
     (generate-integer* n 0 name)
-    (when (= n 64) (generate-int64))]
+    (when (= n 64) (generate-int64))
+    #t]
    ['uinteger
-    (generate-fixed-point* #f 32 0 name)]
+    (generate-fixed-point* #f 32 0 name)
+    #t]
    [(list 'uinteger n)
-    (generate-fixed-point* #f n 0 name)]
+    (generate-fixed-point* #f n 0 name)
+    #t]
    [_ #f]))
 
 (register-generator! generate-integer)
