@@ -209,14 +209,16 @@
 
   (register-ruleset! (fx-name 'bitwise-distribute) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name) (z . ,name))
-    `((,(fx-name 'distribute-or-and-l)    (,bor x (,band y z))    (,band (,bor x y) (,bor x z)))
-      (,(fx-name 'distribute-or-and-r)    (,bor (,band y z) x)    (,band (,bor x y) (,bor x z)))
-      (,(fx-name 'distribute-and-or-l)    (,band x (,bor y z))    (,bor (,band x y) (,band x z)))
-      (,(fx-name 'distribute-and-or-r)    (,band (,bor y z) x)    (,bor (,band x y) (,band x z)))
-      (,(fx-name 'distribute-and-xor-l)   (,band x (,bxor y z))   (,bxor (,band x y) (,band x z)))
-      (,(fx-name 'distribute-and-xor-r)   (,band (,bxor y z) x)   (,bxor (,band x y) (,band x z)))
-      (,(fx-name 'distribute-not-or)      (,bnot (,bor x y))      (,band (,bnot x) (,bnot y)))
-      (,(fx-name 'distribute-not-and)     (,bnot (,band x y))     (,bor (,bnot x) (,bnot y)))))
+    `((,(fx-name 'distribute-or-and-out)    (,bor x (,band y z))    (,band (,bor x y) (,bor x z)))
+      (,(fx-name 'distribute-and-or-out)    (,band x (,bor y z))    (,bor (,band x y) (,band x z)))
+      (,(fx-name 'distribute-and-xor-out)   (,band x (,bxor y z))   (,bxor (,band x y) (,band x z)))
+      (,(fx-name 'distribute-not-or-out)    (,bnot (,bor x y))      (,band (,bnot x) (,bnot y)))
+      (,(fx-name 'distribute-not-and-out)   (,bnot (,band x y))     (,bor (,bnot x) (,bnot y)))
+      (,(fx-name 'distribute-or-and-in)     (,band (,bor x y) (,bor x z))     (,bor x (,band y z)))
+      (,(fx-name 'distribute-and-or-in)     (,bor (,band x y) (,band x z))    (,band x (,bor y z)))
+      (,(fx-name 'distribute-and-xor-in)    (,bxor (,band x y) (,band x z))   (,band x (,bxor y z)))
+      (,(fx-name 'distribute-not-or-in)     (,band (,bnot x) (,bnot y))       (,bnot (,bor x y)))
+      (,(fx-name 'distribute-not-and-in)    (,bor (,bnot x) (,bnot y))        (,bnot (,band x y)))))
 
   (register-ruleset! (fx-name 'bitwise-eliminate) '(arithmetic bitwise simplify fp-safe)
     `((x . ,name) (y . ,name))
@@ -273,19 +275,19 @@
 
 ;; generic integer operators and rules
 (define (generate-integer* nbits scale name)
+  (define bf->fx (bigfloat->fx #t nbits scale))
+  (define fx->bf (fx->bigfloat #t nbits scale))
 
   (define (fx-name name)
     (sym-append name '.fx nbits '- scale))
 
   (define (bfshl x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshl #t nbits 0) x* y*))))
+    (let ([x* (bf->fx x)] [y* (bf->fx y)])
+      (fx->bf ((fxshl #t nbits 0) x* y*))))
 
   (define (bfshr x y)
-    (let ([x* (bigfloat->integer x)]
-          [y* (bigfloat->integer y)])
-      (bf ((fxshr #t nbits 0) x* y*))))
+    (let ([x* (bf->fx x)] [y* (bf->fx y)])
+      (fx->bf ((fxshr #t nbits 0) x* y*))))
 
   ;; operators
 

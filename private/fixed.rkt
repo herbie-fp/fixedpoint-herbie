@@ -179,16 +179,27 @@
   (cond
    [(or (nan? x) (nan? y)) +nan.0]
    [(negative? y) ((fxshr sign? nbits scale) x (- y))]
+   [sign?
+    (define x* (abs x))
+    (define s (arithmetic-shift (bitwise-bit-field x* 0 nbits) y))
+    (define r (bitwise-bit-field s 0 31))
+    (if (negative? x) (- r) r)]
    [else
-    (define r (arithmetic-shift (bitwise-bit-field x 0 nbits) y))
-    (* (bitwise-bit-field r 0 (- nbits 1))
-      (if (bitwise-bit-set? r (- nbits 1)) -1 1))]))
+    (define s (arithmetic-shift (bitwise-bit-field x 0 nbits) y))
+    (bitwise-bit-field s 0 31)]))
 
 (define ((fxshr sign? nbits scale) x y)
   (cond
    [(or (nan? x) (nan? y)) +nan.0]
    [(negative? y) ((fxshl sign? nbits scale) x (- y))]
-   [else (arithmetic-shift x (- y))]))
+   [sign?
+    (define x* (abs x))
+    (define s (arithmetic-shift (bitwise-bit-field x* 0 nbits) (- y)))
+    (define r (bitwise-bit-field s 0 31))
+    (if (negative? x) (- r) r)]
+   [else
+    (define s (arithmetic-shift (bitwise-bit-field x 0 nbits) (- y)))
+    (bitwise-bit-field s 0 31)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Math functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -327,6 +338,14 @@
 
   (check-equal? ((fx2/ #f 16 0) 32 4) 8)
   (check-equal? ((fx2/ #f 16 2) 32 4) 2)
+
+  ; shl
+  (check-equal? ((fxshl #t 16 0) 10 4) 160)
+  (check-equal? ((fxshl #t 16 0) -10 4) -160)
+
+  ; shr
+  (check-equal? ((fxshr #t 16 0) 160 4) 10)
+  (check-equal? ((fxshr #t 16 0) -160 4) -10)
 
 )
 

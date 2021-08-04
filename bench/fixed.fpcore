@@ -63,12 +63,12 @@
 (FPCore (x y)
  :name "demorgans 1, integer"
  :precision integer
- (bnot (bor x y)))
+ (band (bnot x) (bnot y)))
 
 (FPCore (x y)
  :name "demorgans 2, integer"
  :precision integer
- (bnot (band x y)))
+ (bor (bnot x) (bnot y)))
 
 (FPCore (x y)
  :name "average, integer"
