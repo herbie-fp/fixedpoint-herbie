@@ -1,0 +1,166 @@
+(FPCore (u v T)
+  :name "doppler1"
+  :cite (darulova-kuncak-2014)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (and (<= -100 u 100) (<= 20 v 20000) (<= -30 T 50))
+  :rosa-ensuring 1e-12
+  (let ([t1 (+ 331.4 (* 0.6 T))])
+    (/ (* (- t1) v) (* (+ t1 u) (+ t1 u)))))
+
+(FPCore (u v T)
+  :name "doppler2"
+  :cite (darulova-kuncak-2014)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (and (<= -125 u 125) (<= 15 v 25000) (<= -40 T 60))
+  (let ([t1 (+ 331.4 (* 0.6 T))])
+    (/ (* (- t1) v) (* (+ t1 u) (+ t1 u)))))
+
+(FPCore (u v T)
+  :name "doppler3"
+  :cite (darulova-kuncak-2014)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (and (<= -30 u 120) (<= 320 v 20300) (<= -50 T 30))
+  (let ([t1 (+ 331.4 (* 0.6 T))])
+    (/ (* (- t1) v) (* (+ t1 u) (+ t1 u)))))
+
+(FPCore (x1 x2 x3)
+  :name "rigidBody1"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (and (<= -15 x1 15) (<= -15 x2 15) (<= -15 x3 15))
+  (- (- (- (- (* x1 x2)) (* (* 2 x2) x3)) x1) x3))
+
+(FPCore (x1 x2 x3)
+  :name "rigidBody2"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (and (<= -15 x1 15) (<= -15 x2 15) (<= -15 x3 15))
+  (- (+ (- (+ (* (* (* 2 x1) x2) x3) (* (* 3 x3) x3))
+           (* (* (* x2 x1) x2) x3)) (* (* 3 x3) x3))
+     x2))
+
+(FPCore (x1 x2)
+  :name "jetEngine"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain controls
+  :precision (fixed 32 -16)
+  :pre (and (<= -5 x1 5) (<= -20 x2 5))
+  (let ([t (- (+ (* (* 3 x1) x1) (* 2 x2)) x1)]
+        [t* (- (- (* (* 3 x1) x1) (* 2 x2)) x1)]
+        [d (+ (* x1 x1) 1)])
+    (let ([s (/ t d)] [s* (/ t* d)])
+      (+ x1
+         (+
+          (+
+           (+
+            (+
+             (* (+ (* (* (* 2 x1) s) (- s 3)) (* (* x1 x1) (- (* 4 s) 6))) d)
+             (* (* (* 3 x1) x1) s))
+            (* (* x1 x1) x1))
+           x1)
+          (* 3 s*))))))
+
+(FPCore (v w r)
+  :name "turbine1"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain controls
+  :precision (fixed 32 -16)
+  :pre (and (<= -4.5 v -0.3) (<= 0.4 w 0.9) (<= 3.8 r 7.8))
+  (- (- (+ 3 (/ 2 (* r r))) (/ (* (* 0.125 (- 3 (* 2 v))) (* (* (* w w) r) r)) (- 1 v))) 4.5))
+
+(FPCore (v w r)
+  :name "turbine2"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain controls
+  :precision (fixed 32 -16)
+  :pre (and (<= -4.5 v -0.3) (<= 0.4 w 0.9) (<= 3.8 r 7.8))
+  (- (- (* 6 v) (/ (* (* 0.5 v) (* (* (* w w) r) r)) (- 1 v))) 2.5))
+
+(FPCore (v w r)
+  :name "turbine3"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain controls
+  :precision (fixed 32 -16)
+  :pre (and (<= -4.5 v -0.3) (<= 0.4 w 0.9) (<= 3.8 r 7.8))
+  (- (- (- 3 (/ 2 (* r r)))
+        (/ (* (* 0.125 (+ 1 (* 2 v))) (* (* (* w w) r) r)) (- 1 v)))
+     0.5))
+
+(FPCore (x)
+  :name "verhulst"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (<= 0.1 x 0.3)
+  (let ([r 4.0] [K 1.11])
+    (/ (* r x) (+ 1 (/ x K)))))
+
+(FPCore (x)
+  :name "predatorPrey"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain science
+  :precision (fixed 32 -16)
+  :pre (<= 0.1 x 0.3)
+  (let ([r 4.0] [K 1.11])
+    (/ (* (* r x) x) (+ 1 (* (/ x K) (/ x K))))))
+
+(FPCore (x)
+  :name "sine"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain mathematics
+  :precision (fixed 32 -16)
+  :rosa-post (=> res (< -1 res 1))
+  :rosa-ensuring 1e-14
+  :pre (< -1.57079632679 x 1.57079632679)
+  (- (+ (- x (/ (* (* x x) x) 6.0))
+        (/ (* (* (* (* x x) x) x) x) 120))
+     (/ (* (* (* (* (* (* x x) x) x) x) x) x) 5040)))
+
+(FPCore (x)
+  :name "sqroot"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain mathematics
+  :precision (fixed 32 -16)
+  :pre (<= 0 x 1)
+  (- (+ (- (+ 1.0 (* 0.5 x)) (* (* 0.125 x) x))
+        (* (* (* 0.0625 x) x) x)) (* (* (* (* 0.0390625 x) x) x) x)))
+
+(FPCore (x)
+  :name "sineOrder3"
+  :cite (darulova-kuncak-2014 solovyev-et-al-2015)
+  :fpbench-domain mathematics
+  :precision (fixed 32 -16)
+  :pre (< -2 x 2)
+  :rosa-post (=> res (< -1 res 1))
+  :rosa-ensuring 1e-14
+  (- (* 0.954929658551372 x) (* 0.12900613773279798 (* (* x x) x))))
+
+;; These are called `PathError` and appear in a figure in the paper on
+;; path error.
+
+(FPCore (x)
+  :name "cav10"
+  :cite (darulova-kuncak-2014)
+  :precision (fixed 32 -16)
+  :pre (< 0 x 10)
+  :rosa-post (=> res (<= 0 res 3.0))
+  :rosa-ensuring 3.0
+  (if (>= (- (* x x) x) 0)
+      (/ x 10)
+      (+ (* x x) 2)))
+
+;; This benchmark is in the `Z3Only` file
+
+(FPCore (u)
+  :name "bspline3"
+  :cite (darulova-kuncak-2014)
+  :precision (fixed 32 -16)
+  :pre (<= 0 u 1)
+  :rosa-post (=> res (<= -0.17 res 0.05))
+  :rosa-ensuring 1e-11
+  (/ (- (* (* u u) u)) 6))
