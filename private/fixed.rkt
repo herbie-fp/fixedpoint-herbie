@@ -23,6 +23,7 @@
    [fxxor (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fxshl (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
    [fxshr (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
+   [fxbshr (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx? fx?))]
 
    [fxsqrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
    [fxcbrt (-> boolean? fx-bitwidth? fx-scale? (-> fx? fx?))]
@@ -186,20 +187,28 @@
     (if (negative? x) (- r) r)]
    [else
     (define s (arithmetic-shift (bitwise-bit-field x 0 nbits) y))
-    (bitwise-bit-field s 0 31)]))
+    (bitwise-bit-field s 0 32)]))
 
 (define ((fxshr sign? nbits scale) x y)
   (cond
    [(or (nan? x) (nan? y)) +nan.0]
    [(negative? y) ((fxshl sign? nbits scale) x (- y))]
+   [else (arithmetic-shift x (- y))]))
+
+(define ((fxbshr sign? nbits scale) x y)
+  (cond
+   [(or (nan? x) (nan? y)) +nan.0]
+   [(negative? y) ((fxshl sign? nbits scale) x (- y))]
    [sign?
-    (define x* (abs x))
-    (define s (arithmetic-shift (bitwise-bit-field x* 0 nbits) (- y)))
-    (define r (bitwise-bit-field s 0 31))
-    (if (negative? x) (- r) r)]
-   [else
-    (define s (arithmetic-shift (bitwise-bit-field x 0 nbits) (- y)))
-    (bitwise-bit-field s 0 31)]))
+    (define x*
+      (if (negative? x)
+          (bitwise-ior (arithmetic-shift 1 (- nbits 1)) (bitwise-bit-field x 0 (- nbits 1)))
+          x))
+    (define r ((fxshr #f nbits scale) x* y))
+    (if (bitwise-bit-set? r (- nbits 1))
+        (- (bitwise-bit-field r 0 (- nbits 1)))
+        r)]
+   [else ((fxshr sign? nbits scale) x y)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Math functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -344,8 +353,18 @@
   (check-equal? ((fxshl #t 16 0) -10 4) -160)
 
   ; shr
+  (check-equal? ((fxshr #t 16 0) 256 4) 16)
   (check-equal? ((fxshr #t 16 0) 160 4) 10)
   (check-equal? ((fxshr #t 16 0) -160 4) -10)
+  (check-equal? ((fxshr #t 16 0) 5123 1) 2561)
+  (check-equal? ((fxshr #t 16 0) -5123 1) -2562)
+
+  ; bshr
+  (check-equal? ((fxbshr #t 16 0) 256 4) 16)
+  (check-equal? ((fxbshr #t 16 0) -10 4) 4095)
+  (check-equal? ((fxbshr #t 16 0) -100 4) 4089)
+  (check-equal? ((fxbshr #t 16 0) -100 15) 1)
+  (check-equal? ((fxbshr #t 16 0) 100 15) 0)
 
 )
 

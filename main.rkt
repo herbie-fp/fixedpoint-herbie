@@ -47,6 +47,12 @@
 (define-operator (shr real real) real
   [bf #f] [ival #f] [nonffi arithmetic-shift])
 
+(define-operator (bshl real real) real
+  [bf #f] [ival #f] [nonffi arithmetic-shift])  ; nonffi is wrong
+
+(define-operator (bshr real real) real
+  [bf #f] [ival #f] [nonffi arithmetic-shift])  ; nonffi is wrong
+
 ; reinterpret
 (define-operator (reinterpret real) real
   [bf identity] [ival identity] [nonffi identity])
@@ -289,6 +295,10 @@
     (let ([x* (bf->fx x)] [y* (bf->fx y)])
       (fx->bf ((fxshr #t nbits 0) x* y*))))
 
+  (define (bfbshr x y)
+    (let ([x* (bf->fx x)] [y* (bf->fx y)])
+      (fx->bf ((fxbshr #t nbits 0) x* y*))))
+
   ;; operators
 
   (register-operator-impl! 'shl (fx-name 'shl) (list name name) name
@@ -296,6 +306,12 @@
 
   (register-operator-impl! 'shr (fx-name 'shr) (list name name) name
     `((fl . ,(fxshr #t nbits 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t nbits 0))))
+
+  (register-operator-impl! 'bshl (fx-name 'bshl) (list name name) name    ; bshl is shl
+    `((fl . ,(fxshl #t nbits 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t nbits 0))))
+
+  (register-operator-impl! 'bshr (fx-name 'bshr) (list name name) name
+    `((fl . ,(fxbshr #t nbits 0)) (bf . ,bfbshr) (nonffi . ,(fxbshr #t nbits 0))))
 
   ;; rules
 
@@ -305,7 +321,7 @@
     `((,(fx-name 'integer-avg-bitwise)
        (,(fx-name '/) (,(fx-name '+) a b) 2)
        (,(fx-name '+) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1))
-                      (,(fx-name 'band) (,(fx-name 'neg) (,(fx-name 'shr) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1)) ,(- nbits 1)))
+                      (,(fx-name 'band) (,(fx-name 'bshr) (,(fx-name '+) (,(fx-name 'band) a b) (,(fx-name 'shr) (,(fx-name 'bxor) a b) 1)) ,(- nbits 1))
                                         (,(fx-name 'bxor) a b))))))
 )
 
