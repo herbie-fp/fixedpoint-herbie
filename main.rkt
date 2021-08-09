@@ -412,6 +412,17 @@
       (insert_double      b     (reinterpret_double_int64 (reinterpret_int64_double b)))))
 )
 
+; copy from <herbie>/src/conversions.rkt
+(define replace-table `((" " . "_") ("(" . "") (")" . "")))
+
+(define/contract (string-replace* str changes)
+  (-> string? (listof (cons/c string? string?)) string?)
+  (let loop ([str str] [changes changes])
+    (match changes
+      [(? null?) str]
+      [_ (let ([change (car changes)])
+           (loop (string-replace str (car change) (cdr change)) (cdr changes)))])))
+
 
 ;; Generator for fixed-point representations
 (define (generate-fixed-point name)
@@ -445,5 +456,81 @@
     #t]
    [_ #f]))
 
+;; Generators for representation conversions
+(define (generate-fixed-conversion name1 name2)
+  (match* (name1 name2)
+   [('integer _) (generate-fixed-conversion '(fixed 32 0) name2)]
+   [((list 'integer n) _) (generate-fixed-conversion `(fixed ,n 0) name2)]
+   [('uinteger _) (generate-fixed-conversion '(ufixed 32 0) name2)]
+   [((list 'uinteger n) _) (generate-fixed-conversion `(ufixed ,n 0) name2)]
+   [(_ 'integer) (generate-fixed-conversion name1 '(fixed 32 0))]
+   [(_ (list 'integer n)) (generate-fixed-conversion name1 `(fixed ,n 0))]
+   [(_ 'uinteger) (generate-fixed-conversion name1 '(ufixed 32 0))]
+   [(_ (list 'uinteger n)) (generate-fixed-conversion name1 `(ufixed ,n 0))]
+   [((list 'fixed n1 s1) (list 'fixed n2 s2))
+    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
+    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define conv1 (sym-append prec1* '-> prec2*))
+    (define conv2 (sym-append prec2* '-> prec1*))
+
+    (define impl1 (compose (real->fx #t n2 s2) (fx->real #t n1 s1)))
+    (define impl2 (compose (real->fx #t n1 s1) (fx->real #t n2 s2)))
+
+    (register-operator-impl! 'cast conv1 (list name1) name2
+      (list (cons 'fl impl1)))
+
+    (register-operator-impl! 'cast conv2 (list name2) name1
+      (list (cons 'fl impl2)))
+
+    #t]
+   [((list 'ufixed n1 s1) (list 'ufixed n2 s2))
+    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
+    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define conv1 (sym-append prec1* '-> prec2*))
+    (define conv2 (sym-append prec2* '-> prec1*))
+
+    (define impl1 (compose (real->fx #f n2 s2) (fx->real #f n1 s1)))
+    (define impl2 (compose (real->fx #f n1 s1) (fx->real #f n2 s2)))
+
+    (register-operator-impl! 'cast conv1 (list name1) name2
+      (list (cons 'fl impl1)))
+
+    (register-operator-impl! 'cast conv2 (list name2) name1
+      (list (cons 'fl impl2)))
+    #t]
+   [((list 'fixed n1 s1) (list 'ufixed n2 s2))
+    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
+    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define conv1 (sym-append prec1* '-> prec2*))
+    (define conv2 (sym-append prec2* '-> prec1*))
+
+    (define impl1 (compose (real->fx #f n2 s2) (fx->real #t n1 s1)))
+    (define impl2 (compose (real->fx #f n1 s1) (fx->real #t n2 s2)))
+
+    (register-operator-impl! 'cast conv1 (list name1) name2
+      (list (cons 'fl impl1)))
+
+    (register-operator-impl! 'cast conv2 (list name2) name1
+      (list (cons 'fl impl2)))
+    #t]
+   [((list 'ufixed n1 s1) (list 'fixed n2 s2))
+    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
+    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define conv1 (sym-append prec1* '-> prec2*))
+    (define conv2 (sym-append prec2* '-> prec1*))
+
+    (define impl1 (compose (real->fx #t n2 s2) (fx->real #f n1 s1)))
+    (define impl2 (compose (real->fx #t n1 s1) (fx->real #f n2 s2)))
+
+    (register-operator-impl! 'cast conv1 (list name1) name2
+      (list (cons 'fl impl1)))
+
+    (register-operator-impl! 'cast conv2 (list name2) name1
+      (list (cons 'fl impl2)))
+    #t]
+   [(_ _) #f]))
+   
+
 (register-generator! generate-integer)
 (register-generator! generate-fixed-point)
+(register-conversion-generator! generate-fixed-conversion)
