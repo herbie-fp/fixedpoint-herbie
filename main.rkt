@@ -83,7 +83,8 @@
               (cons 'bf bf-impl)
               (cons 'ival ival-impl)))
       (define info-dict (filter cdr base-dict))
-      (register-constant-impl! cnst (fx-name cnst) name info-dict))
+      (define repr (get-representation name))
+      (register-operator-impl! cnst (fx-name cnst) (list) repr info-dict))
 
   (register-fx-constant! 'PI
       (const ((real->fx sign? nbits scale) pi)))
@@ -102,39 +103,39 @@
   ; Helper function to declare operator implementations
   (define (register-fx-operator! op op-name argc fl-impl
                                 #:bf [bf-impl #f] #:ival [ival-impl #f]
-                                #:nonffi [nonffi-imlp #f]
-                                #:itype [itype #f] #:otype [otype #f])
-    (define base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl) (cons 'ival ival-impl)
-                            (cons 'ival ival-impl) (cons 'itype itype) (cons 'otype otype)))
+                                #:nonffi [nonffi-imlp #f] #:otype [otype #f])
+    (define base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl) (cons 'ival ival-impl)))
     (define info-dict (filter cdr base-dict))
-    (register-operator-impl! op (fx-name op-name) (make-list argc name) name info-dict))
+    (define repr (get-representation name))
+    (define orepr (if otype (get-representation otype) repr))
+    (register-operator-impl! op (fx-name op-name) (make-list argc repr) orepr info-dict))
 
   (register-fx-operator! 'neg 'neg 1 (curry (fx2- sign? nbits scale) 0))
   (register-fx-operator! '+ '+ 2 (fx2+ sign? nbits scale))
   (register-fx-operator! '- '- 2 (fx2- sign? nbits scale))
   (register-fx-operator! '* '* 2 (fx2* sign? nbits scale))
   (register-fx-operator! '/ '/ 2 (fx2/ sign? nbits scale))
-  ;;; (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt sign? nbits scale))
-  ;;; (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt sign? nbits scale))
+  (register-fx-operator! 'sqrt 'sqrt 1 (fxsqrt sign? nbits scale))
+  (register-fx-operator! 'cbrt 'cbrt 1 (fxcbrt sign? nbits scale))
   (register-fx-operator! 'fabs 'fabs 1 abs)
 
-  ;;; (register-fx-operator! 'exp 'exp 1 (fxexp sign? nbits scale))
-  ;;; (register-fx-operator! 'log 'log 1 (fxlog sign? nbits scale))
-  ;;; (register-fx-operator! 'pow 'pow 2 (fxpow sign? nbits scale))
+  (register-fx-operator! 'exp 'exp 1 (fxexp sign? nbits scale))
+  (register-fx-operator! 'log 'log 1 (fxlog sign? nbits scale))
+  (register-fx-operator! 'pow 'pow 2 (fxpow sign? nbits scale))
 
-  ;;; (register-fx-operator! 'sin 'sin 1 (fxsin sign? nbits scale))
-  ;;; (register-fx-operator! 'cos 'cos 1 (fxcos sign? nbits scale))
-  ;;; (register-fx-operator! 'tan 'tan 1 (fxtan sign? nbits scale))
-  ;;; (register-fx-operator! 'asin 'asin 1 (fxasin sign? nbits scale))
-  ;;; (register-fx-operator! 'acos 'acos 1 (fxacos sign? nbits scale))
-  ;;; (register-fx-operator! 'atan 'atan 1 (fxatan sign? nbits scale))
+  (register-fx-operator! 'sin 'sin 1 (fxsin sign? nbits scale))
+  (register-fx-operator! 'cos 'cos 1 (fxcos sign? nbits scale))
+  (register-fx-operator! 'tan 'tan 1 (fxtan sign? nbits scale))
+  (register-fx-operator! 'asin 'asin 1 (fxasin sign? nbits scale))
+  (register-fx-operator! 'acos 'acos 1 (fxacos sign? nbits scale))
+  (register-fx-operator! 'atan 'atan 1 (fxatan sign? nbits scale))
 
-  (register-fx-operator! '== '== 2 (comparator =) #:itype name #:otype 'bool) ; override number of arguments
-  (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:itype name #:otype 'bool) ; override number of arguments
-  (register-fx-operator! '< '< 2 (comparator <) #:itype name #:otype 'bool) ; override number of arguments
-  (register-fx-operator! '> '> 2 (comparator >) #:itype name #:otype 'bool) ; override number of arguments
-  (register-fx-operator! '<= '<= 2 (comparator <=) #:itype name #:otype 'bool) ; override number of arguments
-  (register-fx-operator! '>= '>= 2 (comparator >=) #:itype name #:otype 'bool) ; override number of arguments
+  (register-fx-operator! '== '== 2 (comparator =) #:otype 'bool)
+  (register-fx-operator! '!= '!= 2 (negate (comparator =)) #:otype 'bool)
+  (register-fx-operator! '< '< 2 (comparator <) #:otype 'bool)
+  (register-fx-operator! '> '> 2 (comparator >) #:otype 'bool)
+  (register-fx-operator! '<= '<= 2 (comparator <=) #:otype 'bool)
+  (register-fx-operator! '>= '>= 2 (comparator >=) #:otype 'bool)
 
   ; Bitwise operator implemenetations
 
@@ -281,6 +282,7 @@
 
 ;; generic integer operators and rules
 (define (generate-integer* nbits scale name)
+  (define repr (get-representation name))
   (define bf->fx (bigfloat->fx #t nbits scale))
   (define fx->bf (fx->bigfloat #t nbits scale))
 
@@ -301,16 +303,16 @@
 
   ;; operators
 
-  (register-operator-impl! 'shl (fx-name 'shl) (list name name) name
+  (register-operator-impl! 'shl (fx-name 'shl) (list repr repr) repr
     `((fl . ,(fxshl #t nbits 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t nbits 0))))
 
-  (register-operator-impl! 'shr (fx-name 'shr) (list name name) name
+  (register-operator-impl! 'shr (fx-name 'shr) (list repr repr) repr
     `((fl . ,(fxshr #t nbits 0)) (bf . ,bfshr) (nonffi . ,(fxshr #t nbits 0))))
 
-  (register-operator-impl! 'bshl (fx-name 'bshl) (list name name) name    ; bshl is shl
+  (register-operator-impl! 'bshl (fx-name 'bshl) (list repr repr) repr      ; bshl is shl
     `((fl . ,(fxshl #t nbits 0)) (bf . ,bfshl) (nonffi . ,(fxshl #t nbits 0))))
 
-  (register-operator-impl! 'bshr (fx-name 'bshr) (list name name) name
+  (register-operator-impl! 'bshr (fx-name 'bshr) (list repr repr) repr
     `((fl . ,(fxbshr #t nbits 0)) (bf . ,bfbshr) (nonffi . ,(fxbshr #t nbits 0))))
 
   ;; rules
@@ -327,6 +329,9 @@
 
 ;; 32-bit integer operators and rules
 (define (generate-int32)
+  (define double-repr (get-representation 'binary64))
+  (define single-repr (get-representation 'binary32))
+  (define int-repr (get-representation 'integer))
 
   ; Operators
 
@@ -336,23 +341,23 @@
   ; Operator implementations
 
   (when ldexp
-    (register-operator-impl! 'ldexp 'ldexp.f64 (list 'binary64 'integer) 'binary64
+    (register-operator-impl! 'ldexp 'ldexp.f64 (list double-repr int-repr) double-repr
       `((fl . ,ldexp))))
 
   (when ldexpf
-    (register-operator-impl! 'ldexp 'ldexp.f32 (list 'binary32 'integer) 'binary32
+    (register-operator-impl! 'ldexp 'ldexp.f32 (list single-repr int-repr) single-repr
       `((fl . ,ldexpf))))
 
-  (register-operator-impl! 'cast 'binary64->integer (list 'binary64) 'integer
+  (register-operator-impl! 'cast 'binary64->integer (list double-repr) int-repr
     `((fl . ,(compose (real->fx #t 32 0) truncate))))
 
-  (register-operator-impl! 'cast 'binary32->integer (list 'binary32) 'integer
+  (register-operator-impl! 'cast 'binary32->integer (list single-repr) int-repr
     `((fl . ,(compose (real->fx #t 32 0) truncate))))
 
-  (register-operator-impl! 'cast 'integer->binary64 (list 'integer) 'binary64
+  (register-operator-impl! 'cast 'integer->binary64 (list int-repr) double-repr
     `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
 
-  (register-operator-impl! 'cast 'integer->binary32 (list 'integer) 'binary32
+  (register-operator-impl! 'cast 'integer->binary32 (list int-repr) single-repr
     `((fl . ,(compose ->float32 real->double-flonum (fx->real #t 32 0)))))
 
   ; Rules
@@ -370,13 +375,15 @@
 
 ; 64-bit integer operators and rules
 (define (generate-int64)
+  (define double-repr (get-representation 'binary64))
+  (define int-repr (get-representation '(integer 64)))
 
   ; Operator implementations
 
-  (register-operator-impl! 'cast 'binary64->integer_64 (list 'binary64) '(integer 64)
+  (register-operator-impl! 'cast 'binary64->integer_64 (list double-repr) int-repr
     `((fl . ,(compose (real->fx #t 64 0) truncate))))
 
-  (register-operator-impl! 'cast 'integer_64->binary64 (list '(integer 64)) 'binary64
+  (register-operator-impl! 'cast 'integer_64->binary64 (list int-repr) double-repr
     `((fl . ,(compose real->double-flonum (fx->real #t 32 0)))))
 
   (define (reinterpret-as-double x)
@@ -395,11 +402,11 @@
     (let ([x* (bigfloat->real x)])
       (bf (integer-bytes->integer (real->floating-point-bytes x* 8) #t))))
 
-  (register-operator-impl! 'reinterpret 'reinterpret_int64_double (list '(integer 64)) 'binary64
+  (register-operator-impl! 'reinterpret 'reinterpret_int64_double (list int-repr) double-repr
     `((fl . ,reinterpret-as-double) (bf . ,bfreinterpret-as-double)
       (nonffi . ,reinterpret-as-double)))
 
-  (register-operator-impl! 'reinterpret 'reinterpret_double_int64 (list 'binary64) '(integer 64)
+  (register-operator-impl! 'reinterpret 'reinterpret_double_int64 (list double-repr) int-repr
     `((fl . ,reinterpret-as-int64) (bf . ,bfreinterpret-as-int64)
       (nonffi . ,reinterpret-as-int64)))
 
@@ -470,62 +477,70 @@
    [((list 'fixed n1 s1) (list 'fixed n2 s2))
     (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
     (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define repr1 (get-representation name1))
+    (define repr2 (get-representation name2))
+
     (define conv1 (sym-append prec1* '-> prec2*))
     (define conv2 (sym-append prec2* '-> prec1*))
-
     (define impl1 (compose (real->fx #t n2 s2) (fx->real #t n1 s1)))
     (define impl2 (compose (real->fx #t n1 s1) (fx->real #t n2 s2)))
 
-    (register-operator-impl! 'cast conv1 (list name1) name2
+    (register-operator-impl! 'cast conv1 (list repr1) repr2
       (list (cons 'fl impl1)))
 
-    (register-operator-impl! 'cast conv2 (list name2) name1
+    (register-operator-impl! 'cast conv2 (list repr2) repr1
       (list (cons 'fl impl2)))
 
     #t]
    [((list 'ufixed n1 s1) (list 'ufixed n2 s2))
     (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
     (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define repr1 (get-representation name1))
+    (define repr2 (get-representation name2))
+
     (define conv1 (sym-append prec1* '-> prec2*))
     (define conv2 (sym-append prec2* '-> prec1*))
-
     (define impl1 (compose (real->fx #f n2 s2) (fx->real #f n1 s1)))
     (define impl2 (compose (real->fx #f n1 s1) (fx->real #f n2 s2)))
 
-    (register-operator-impl! 'cast conv1 (list name1) name2
+    (register-operator-impl! 'cast conv1 (list repr1) repr2
       (list (cons 'fl impl1)))
 
-    (register-operator-impl! 'cast conv2 (list name2) name1
+    (register-operator-impl! 'cast conv2 (list repr2) repr1
       (list (cons 'fl impl2)))
     #t]
    [((list 'fixed n1 s1) (list 'ufixed n2 s2))
     (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
     (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define repr1 (get-representation name1))
+    (define repr2 (get-representation name2))
+
     (define conv1 (sym-append prec1* '-> prec2*))
     (define conv2 (sym-append prec2* '-> prec1*))
-
     (define impl1 (compose (real->fx #f n2 s2) (fx->real #t n1 s1)))
     (define impl2 (compose (real->fx #f n1 s1) (fx->real #t n2 s2)))
 
-    (register-operator-impl! 'cast conv1 (list name1) name2
+    (register-operator-impl! 'cast conv1 (list repr1) repr2
       (list (cons 'fl impl1)))
 
-    (register-operator-impl! 'cast conv2 (list name2) name1
+    (register-operator-impl! 'cast conv2 (list repr2) repr1
       (list (cons 'fl impl2)))
     #t]
    [((list 'ufixed n1 s1) (list 'fixed n2 s2))
     (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
     (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+    (define repr1 (get-representation name1))
+    (define repr2 (get-representation name2))
+
     (define conv1 (sym-append prec1* '-> prec2*))
     (define conv2 (sym-append prec2* '-> prec1*))
-
     (define impl1 (compose (real->fx #t n2 s2) (fx->real #f n1 s1)))
     (define impl2 (compose (real->fx #t n1 s1) (fx->real #f n2 s2)))
 
-    (register-operator-impl! 'cast conv1 (list name1) name2
+    (register-operator-impl! 'cast conv1 (list repr1) repr2
       (list (cons 'fl impl1)))
 
-    (register-operator-impl! 'cast conv2 (list name2) name1
+    (register-operator-impl! 'cast conv2 (list repr2) repr1
       (list (cons 'fl impl2)))
     #t]
    [(_ _) #f]))
