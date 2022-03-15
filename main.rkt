@@ -286,10 +286,10 @@
 (require (submod "." hairy))
 
 ;; generic integer operators and rules
-(define (generate-integer* nbits scale name fx-name)
+(define (generate-integer* nbits name fx-name)
   (define repr (get-representation name))
-  (define bf->fx (bigfloat->fx #t nbits scale))
-  (define fx->bf (fx->bigfloat #t nbits scale))
+  (define bf->fx (bigfloat->fx #t nbits 0))
+  (define fx->bf (fx->bigfloat #t nbits 0))
 
   (define (bfshl x y)
     (let ([x* (bf->fx x)] [y* (bf->fx y)])
@@ -333,7 +333,7 @@
 (define (generate-int32)
   (define double-repr (get-representation 'binary64))
   (define single-repr (get-representation 'binary32))
-  (define int-repr (get-representation 'integer))
+  (define int-repr (get-representation '(fixed 32 0)))
 
   ; Operators
 
@@ -378,7 +378,7 @@
 ; 64-bit integer operators and rules
 (define (generate-int64)
   (define double-repr (get-representation 'binary64))
-  (define int-repr (get-representation '(integer 64)))
+  (define int-repr (get-representation '(fixed 64 0)))
 
   ; Operator implementations
 
@@ -483,30 +483,40 @@
 
 ;; Generator for fixed-point/integer representations
 (define (generate-fixed-point name)
-  (let loop ([match-name name])
-    (match match-name
-     ['integer (loop (list 'integer 32))]
-     ['uinteger (loop (list 'uinteger 32))]
-     [(list 'integer n)
-      (define name-proc (int-name-proc #t n))
-      (generate-fixed-point* #t n 0 name name-proc)
-      (generate-integer* n 0 name name-proc)
-      (cond [(= n 32) (generate-int32)]
-            [(= n 64) (generate-int64)])
-      #t]
-     [(list 'uinteger n)
-      (define name-proc (int-name-proc #f n))
-      (generate-fixed-point* #f n 0 name name-proc)
-      #t]
-     [(list 'fixed nbits scale)
-      (define name-proc (fx-name-proc #t nbits scale))
-      (generate-fixed-point* #t nbits scale name name-proc)
-      #t]
-    [(list 'ufixed nbits scale)
-      (define name-proc (fx-name-proc #f nbits scale))
-      (generate-fixed-point* #f nbits scale name name-proc)
-      #t]
-    [_ #f])))
+  (match name
+   ['integer
+    (define aliased-name (list 'integer 32))
+    (define repr (generate-fixed-point aliased-name))
+    (register-representation! name repr)
+    repr]
+   ['uinteger
+    (define aliased-name (list 'uinteger 32))
+    (define repr (generate-fixed-point aliased-name))
+    (register-representation! name repr)
+    repr]
+   [(list 'integer n)
+    (define aliased-name (list 'fixed n 0))
+    (define repr (generate-fixed-point aliased-name))
+    (register-representation! name repr)
+    repr]
+   [(list 'uinteger n)
+    (define aliased-name (list 'ufixed n 0))
+    (define repr (generate-fixed-point aliased-name))
+    (register-representation! name repr)
+    repr]
+   [(list 'fixed nbits scale)
+    (define name-proc (fx-name-proc #t nbits scale))
+    (generate-fixed-point* #t nbits scale name name-proc)
+    (when (zero? scale)
+      (generate-integer* nbits name name-proc)
+      (cond [(= nbits 32) (generate-int32)]
+            [(= nbits 64) (generate-int64)]))
+    (get-representation name)]
+   [(list 'ufixed nbits scale)
+    (define name-proc (fx-name-proc #f nbits scale))
+    (generate-fixed-point* #f nbits scale name name-proc)
+    (get-representation name)]
+   [_ #f]))
 
 (register-generator! generate-fixed-point)
 (register-conversion-generator! generate-fixed-conversion)
