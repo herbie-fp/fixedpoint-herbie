@@ -26,6 +26,14 @@
       (cast-single (exact->inexact x))
       (real->single-flonum x)))
 
+(define (fx-name-proc sign? nbits scale)
+  (define prefix (if sign? '.fx '.ufx))
+  (λ (x) (sym-append x prefix nbits '- scale)))
+
+(define (int-name-proc sign? nbits)
+  (define prefix (if sign? '.int '.uint))
+  (λ (x) (sym-append x prefix nbits)))
+
 ;; Common ops
 
 ; bitwise ops (must override `bf` to use)
@@ -59,7 +67,7 @@
   
 
 ; General fixed-point operations
-(define (generate-fixed-point* sign? nbits scale name)
+(define (generate-fixed-point* sign? nbits scale name fx-name)
   (define fx->re (fx->real sign? nbits scale))
   (define re->fx (real->fx sign? nbits scale))
   (define bf->fx (bigfloat->fx sign? nbits scale))
@@ -67,13 +75,12 @@
   (define ord->fx (ordinal->fx sign? nbits scale))
   (define fx->ord (fx->ordinal sign? nbits scale))
 
-  (define (fx-name name)
-    (sym-append name (if sign? '.fx '.ufx) nbits '- scale))
-
   ; Representation
   (register-representation! name 'real fx?
     bf->fx fx->bf ord->fx fx->ord
     nbits nan?)
+
+   (define repr (get-representation name))
 
   ; Constant implementations
 
@@ -83,7 +90,6 @@
               (cons 'bf bf-impl)
               (cons 'ival ival-impl)))
       (define info-dict (filter cdr base-dict))
-      (define repr (get-representation name))
       (register-operator-impl! cnst (fx-name cnst) (list) repr info-dict))
 
   (register-fx-constant! 'PI
@@ -106,7 +112,6 @@
                                 #:nonffi [nonffi-imlp #f] #:otype [otype #f])
     (define base-dict (list (cons 'fl fl-impl) (cons 'bf bf-impl) (cons 'ival ival-impl)))
     (define info-dict (filter cdr base-dict))
-    (define repr (get-representation name))
     (define orepr (if otype (get-representation otype) repr))
     (register-operator-impl! op (fx-name op-name) (make-list argc repr) orepr info-dict))
 
@@ -281,13 +286,10 @@
 (require (submod "." hairy))
 
 ;; generic integer operators and rules
-(define (generate-integer* nbits scale name)
+(define (generate-integer* nbits scale name fx-name)
   (define repr (get-representation name))
   (define bf->fx (bigfloat->fx #t nbits scale))
   (define fx->bf (fx->bigfloat #t nbits scale))
-
-  (define (fx-name name)
-    (sym-append name '.fx nbits '- scale))
 
   (define (bfshl x y)
     (let ([x* (bf->fx x)] [y* (bf->fx y)])
@@ -431,121 +433,80 @@
            (loop (string-replace str (car change) (cdr change)) (cdr changes)))])))
 
 
-;; Generator for fixed-point representations
-(define (generate-fixed-point name)
-  (match name
-    [(list 'fixed nbits scale)
-      (generate-fixed-point* #t nbits scale name)
-      #t]
-    [(list 'ufixed nbits scale)
-      (generate-fixed-point* #f nbits scale name)
-      #t]
-    [_ #f]))
+;; Generators for representation conversions
+;; (this actually generates the operator
+(define (generate-fixed-conversion-ops name1 name2 signed1? signed2? n1 n2 s1 s2)
+  (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
+  (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
+  (define repr1 (get-representation name1))
+  (define repr2 (get-representation name2))
 
-;; Generator for integer representations
-(define (generate-integer name)
-  (match name
-   ['integer
-    (generate-fixed-point* #t 32 0 name)
-    (generate-integer* 32 0 name)
-    (generate-int32)
-    #t]
-   [(list 'integer n)
-    (generate-fixed-point* #t n 0 name)
-    (generate-integer* n 0 name)
-    (when (= n 64) (generate-int64))
-    #t]
-   ['uinteger
-    (generate-fixed-point* #f 32 0 name)
-    #t]
-   [(list 'uinteger n)
-    (generate-fixed-point* #f n 0 name)
-    #t]
-   [_ #f]))
+  (define conv1 (sym-append prec1* '-> prec2*))
+  (define conv2 (sym-append prec2* '-> prec1*))
+  (define impl1 (compose (real->fx signed1? n2 s2)
+                         (fx->real signed1? n1 s1)))
+  (define impl2 (compose (real->fx signed2? n1 s1)
+                         (fx->real signed2? n2 s2)))
+
+  (register-operator-impl! 'cast conv1 (list repr1) repr2
+    (list (cons 'fl impl1)))
+
+  (register-operator-impl! 'cast conv2 (list repr2) repr1
+    (list (cons 'fl impl2))))
 
 ;; Generators for representation conversions
+;; (this is just the pre-processing phase)
 (define (generate-fixed-conversion name1 name2)
-  (match* (name1 name2)
-   [('integer _) (generate-fixed-conversion '(fixed 32 0) name2)]
-   [((list 'integer n) _) (generate-fixed-conversion `(fixed ,n 0) name2)]
-   [('uinteger _) (generate-fixed-conversion '(ufixed 32 0) name2)]
-   [((list 'uinteger n) _) (generate-fixed-conversion `(ufixed ,n 0) name2)]
-   [(_ 'integer) (generate-fixed-conversion name1 '(fixed 32 0))]
-   [(_ (list 'integer n)) (generate-fixed-conversion name1 `(fixed ,n 0))]
-   [(_ 'uinteger) (generate-fixed-conversion name1 '(ufixed 32 0))]
-   [(_ (list 'uinteger n)) (generate-fixed-conversion name1 `(ufixed ,n 0))]
-   [((list 'fixed n1 s1) (list 'fixed n2 s2))
-    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
-    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
-    (define repr1 (get-representation name1))
-    (define repr2 (get-representation name2))
+  (let loop ([full-name1 name1] [full-name2 name2])
+    (match* (full-name1 full-name2)
+     [('integer _) (generate-fixed-conversion '(fixed 32 0) name2)]
+     [((list 'integer n) _) (generate-fixed-conversion `(fixed ,n 0) name2)]
+     [('uinteger _) (generate-fixed-conversion '(ufixed 32 0) name2)]
+     [((list 'uinteger n) _) (generate-fixed-conversion `(ufixed ,n 0) name2)]
+     [(_ 'integer) (generate-fixed-conversion name1 '(fixed 32 0))]
+     [(_ (list 'integer n)) (generate-fixed-conversion name1 `(fixed ,n 0))]
+     [(_ 'uinteger) (generate-fixed-conversion name1 '(ufixed 32 0))]
+     [(_ (list 'uinteger n)) (generate-fixed-conversion name1 `(ufixed ,n 0))]
+     [((list 'fixed n1 s1) (list 'fixed n2 s2))
+      (generate-fixed-conversion-ops name1 name2 #t #t n1 n2 s1 s2)
+      #t]
+     [((list 'ufixed n1 s1) (list 'ufixed n2 s2))
+      (generate-fixed-conversion-ops name1 name2 #f #f n1 n2 s1 s2)
+      #t]
+     [((list 'fixed n1 s1) (list 'ufixed n2 s2))
+      (generate-fixed-conversion-ops name1 name2 #t #f n1 n2 s1 s2)
+      #t]
+     [((list 'ufixed n1 s1) (list 'fixed n2 s2))
+      (generate-fixed-conversion-ops name1 name2 #f #t n1 n2 s1 s2)
+      #t]
+     [(_ _) #f])))
 
-    (define conv1 (sym-append prec1* '-> prec2*))
-    (define conv2 (sym-append prec2* '-> prec1*))
-    (define impl1 (compose (real->fx #t n2 s2) (fx->real #t n1 s1)))
-    (define impl2 (compose (real->fx #t n1 s1) (fx->real #t n2 s2)))
+;; Generator for fixed-point/integer representations
+(define (generate-fixed-point name)
+  (let loop ([match-name name])
+    (match match-name
+     ['integer (loop (list 'integer 32))]
+     ['uinteger (loop (list 'uinteger 32))]
+     [(list 'integer n)
+      (define name-proc (int-name-proc #t n))
+      (generate-fixed-point* #t n 0 name name-proc)
+      (generate-integer* n 0 name name-proc)
+      (cond [(= n 32) (generate-int32)]
+            [(= n 64) (generate-int64)])
+      #t]
+     [(list 'uinteger n)
+      (define name-proc (int-name-proc #f n))
+      (generate-fixed-point* #f n 0 name name-proc)
+      #t]
+     [(list 'fixed nbits scale)
+      (define name-proc (fx-name-proc #t nbits scale))
+      (generate-fixed-point* #t nbits scale name name-proc)
+      #t]
+    [(list 'ufixed nbits scale)
+      (define name-proc (fx-name-proc #f nbits scale))
+      (generate-fixed-point* #f nbits scale name name-proc)
+      #t]
+    [_ #f])))
 
-    (register-operator-impl! 'cast conv1 (list repr1) repr2
-      (list (cons 'fl impl1)))
-
-    (register-operator-impl! 'cast conv2 (list repr2) repr1
-      (list (cons 'fl impl2)))
-
-    #t]
-   [((list 'ufixed n1 s1) (list 'ufixed n2 s2))
-    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
-    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
-    (define repr1 (get-representation name1))
-    (define repr2 (get-representation name2))
-
-    (define conv1 (sym-append prec1* '-> prec2*))
-    (define conv2 (sym-append prec2* '-> prec1*))
-    (define impl1 (compose (real->fx #f n2 s2) (fx->real #f n1 s1)))
-    (define impl2 (compose (real->fx #f n1 s1) (fx->real #f n2 s2)))
-
-    (register-operator-impl! 'cast conv1 (list repr1) repr2
-      (list (cons 'fl impl1)))
-
-    (register-operator-impl! 'cast conv2 (list repr2) repr1
-      (list (cons 'fl impl2)))
-    #t]
-   [((list 'fixed n1 s1) (list 'ufixed n2 s2))
-    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
-    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
-    (define repr1 (get-representation name1))
-    (define repr2 (get-representation name2))
-
-    (define conv1 (sym-append prec1* '-> prec2*))
-    (define conv2 (sym-append prec2* '-> prec1*))
-    (define impl1 (compose (real->fx #f n2 s2) (fx->real #t n1 s1)))
-    (define impl2 (compose (real->fx #f n1 s1) (fx->real #t n2 s2)))
-
-    (register-operator-impl! 'cast conv1 (list repr1) repr2
-      (list (cons 'fl impl1)))
-
-    (register-operator-impl! 'cast conv2 (list repr2) repr1
-      (list (cons 'fl impl2)))
-    #t]
-   [((list 'ufixed n1 s1) (list 'fixed n2 s2))
-    (define prec1* (string->symbol (string-replace* (~a name1) replace-table)))
-    (define prec2* (string->symbol (string-replace* (~a name2) replace-table)))
-    (define repr1 (get-representation name1))
-    (define repr2 (get-representation name2))
-
-    (define conv1 (sym-append prec1* '-> prec2*))
-    (define conv2 (sym-append prec2* '-> prec1*))
-    (define impl1 (compose (real->fx #t n2 s2) (fx->real #f n1 s1)))
-    (define impl2 (compose (real->fx #t n1 s1) (fx->real #f n2 s2)))
-
-    (register-operator-impl! 'cast conv1 (list repr1) repr2
-      (list (cons 'fl impl1)))
-
-    (register-operator-impl! 'cast conv2 (list repr2) repr1
-      (list (cons 'fl impl2)))
-    #t]
-   [(_ _) #f]))
-   
-
-(register-generator! generate-integer)
 (register-generator! generate-fixed-point)
 (register-conversion-generator! generate-fixed-conversion)

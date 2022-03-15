@@ -7,9 +7,6 @@
                       ((integer 16) (fixed 16 2))
                       ((integer 16) (fixed 16 3))
                       ((integer 16) (fixed 16 4)))
- :herbie-target
- (+ (/ x 2) (/ y 2))
- 
  (/ (+ x y) 2))
 
 (FPCore (x y)
@@ -27,9 +24,6 @@
                       ((uinteger 16) (ufixed 16 2))
                       ((uinteger 16) (ufixed 16 3))
                       ((uinteger 16) (ufixed 16 4)))
- :herbie-target
- (+ (/ x 2) (/ y 2))
-
  (/ (+ x y) 2))
 
 (FPCore (x y)
@@ -51,9 +45,6 @@
                       ((integer 16) (fixed 16 2))
                       ((integer 16) (fixed 16 3))
                       ((integer 16) (fixed 16 4)))
- :herbie-target
- (- (* (/ a 2) d) (* (/ b 2) c))
-
  (/ (- (* a d) (* b c)) 2))
 
 (FPCore (a b c d)
@@ -67,7 +58,4 @@
                       ((integer 16) (fixed 16 2))
                       ((integer 16) (fixed 16 3))
                       ((integer 16) (fixed 16 4)))
- :herbie-target
- (- (* (/ a 16) d) (* (/ b 16) c))
-
  (/ (- (* a d) (* b c)) 16))
