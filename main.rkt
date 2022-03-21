@@ -487,22 +487,22 @@
    ['integer
     (define aliased-name (list 'integer 32))
     (define repr (generate-fixed-point aliased-name))
-    (register-representation! name repr)
+    (register-representation-alias! name repr)
     repr]
    ['uinteger
     (define aliased-name (list 'uinteger 32))
     (define repr (generate-fixed-point aliased-name))
-    (register-representation! name repr)
+    (register-representation-alias! name repr)
     repr]
    [(list 'integer n)
     (define aliased-name (list 'fixed n 0))
     (define repr (generate-fixed-point aliased-name))
-    (register-representation! name repr)
+    (register-representation-alias! name repr)
     repr]
    [(list 'uinteger n)
     (define aliased-name (list 'ufixed n 0))
     (define repr (generate-fixed-point aliased-name))
-    (register-representation! name repr)
+    (register-representation-alias! name repr)
     repr]
    [(list 'fixed nbits scale)
     (define name-proc (fx-name-proc #t nbits scale))
